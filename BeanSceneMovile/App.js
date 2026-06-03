@@ -18,10 +18,7 @@ function BottomTabs({onLogout}) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        headerStyle: styles.header,
-        headerTintColor: '#fff',
-        headerTitleAlign: 'left',
-        headerTitleStyle: styles.headerTitle,
+      headerShown: false,
 
       tabBarStyle: styles.tabBar,
       tabBarActiveTintColor: '#C8D6D9',
