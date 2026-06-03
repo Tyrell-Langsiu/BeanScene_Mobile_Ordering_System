@@ -2,17 +2,30 @@ import * as React from 'react';
 import {useState, useEffect} from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StyleSheet, View, ActivityIndicator } from 'react-native';
 
 import LoginScreen from './screens/login.js';
 import MenuScreen from './screens/menu.js';
+import ItemDetailsScreen from './screens/itemDetails.js';
 import OrderScreen from './screens/order.js';
 import TableScreen from './screens/table.js';
 import CartScreen from './screens/cart.js';
 import ManagerScreen from './screens/manager.js';
 
 const Tab = createBottomTabNavigator();
+
+const MenuStack = createNativeStackNavigator();
+
+function MenuStackScreen() {
+  return (
+    <MenuStack.Navigator screenOptions={{headerShown: false}}>
+      <MenuStack.Screen name="MenuList" component={MenuScreen} />
+      <MenuStack.Screen name="ItemDetails" component={ItemDetailsScreen} />
+    </MenuStack.Navigator>
+  )
+}
 
 function BottomTabs({onLogout}) {
   return (
@@ -50,7 +63,7 @@ function BottomTabs({onLogout}) {
       },
     })}
     >
-      <Tab.Screen name="Menu" component={MenuScreen} />
+      <Tab.Screen name="Menu" component={MenuStackScreen} />
       <Tab.Screen name="Table" component={TableScreen} />
       <Tab.Screen name="Cart" component={CartScreen} />
       <Tab.Screen name="Order" component={OrderScreen} />
