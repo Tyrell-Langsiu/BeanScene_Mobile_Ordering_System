@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, styles as sharedStyles } from '../styles';
 
 const API_BASE_URL = 'https://beansceneorderingsystem.onrender.com';
+const CART_KEY = 'beanSceneCart';
 
 export default function ItemDetailsScreen({ route, navigation }) {
     const {item} = route.params;
@@ -67,23 +68,50 @@ export default function ItemDetailsScreen({ route, navigation }) {
     }
     async function addToCart() {
         try {
-            const existingCart = await AsyncStorage.getItem('cart');
+            const existingCart = await AsyncStorage.getItem(CART_KEY);
             const cart = existingCart ? JSON.parse(existingCart) : [];
 
             const cartItem = {
                 cartItemId: `${item.id || item._id}-${Date.now()}`,
+                id: item.id || item._id,
                 menuItemId: item.id || item._id,
                 name: item.name,
                 price: Number(item.price || 0),
-                quantity,
-                specialRequests,
-                totalPrice,
+                quantity: quantity,
+                notes: specialRequests,
+                specialRequests: specialRequests,
+                totalPrice: totalPrice,
                 imageUrl: getImageUrl(),
             };
-            cart.push(cartItem);
-            await AsyncStorage.setItem('cart', JSON.stringify(cart));
+            const existingItem = cart.find(
+              (cartItemExisting) =>
+                cartItemExisting.menuItemId === cartItem.menuItemId &&
+                cartItemExisting.specialRequests === cartItem.specialRequests
+            );
+
+            let updatedCart;
+
+            if (existingItem) {
+              updatedCart = cart.map((cartItemExisting) =>
+                cartItemExisting.menuItemId === cartItem.menuItemId &&
+                cartItemExisting.specialRequests === cartItem.specialRequests
+                ? {
+                  ...cartItemExisting,
+                  quantity: cartItemExisting.quantity + quantity,
+                  totalPrice:
+                    Number(cartItemExisting.price) *
+                    (cartItemExisting.quantity + quantity),
+                } : cartItemExisting
+              );
+            } else {
+              updatedCart = [...cart, cartItem];
+            }
+
+            await AsyncStorage.setItem(CART_KEY, JSON.stringify(updatedCart));
 
             Alert.alert('Adding to Cart', `${item.name} has been added to the cart`);
+
+            navigation.navigate('MenuList');
         } catch (err) {
             console.log(err);
             Alert.alert('Error', 'Could not add item to cart.');
