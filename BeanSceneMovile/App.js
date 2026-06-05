@@ -86,12 +86,16 @@ export default function App() {
 
   async function checkedSavedLogin() {
     try {
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
+      
       const token = await AsyncStorage.getItem('token');
       const savedUser = await AsyncStorage.getItem('user');
 
       if (token && savedUser) {
         setLoggedInUser(JSON.parse(savedUser));
       }
+     
     } catch (err) {
       console.log(err);
     } finally {
