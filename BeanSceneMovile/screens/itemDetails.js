@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colors, styles as sharedStyles } from '../styles';
 
 const API_BASE_URL = 'https://beansceneorderingsystem.onrender.com';
 
@@ -93,12 +94,12 @@ export default function ItemDetailsScreen({ route, navigation }) {
     const flags = getDietaryFlags();
 
     return (
-        <View style={styles.screen}>
-            <View style={styles.header}>
+        <View style={sharedStyles.screen}>
+            <View style={styles.detailsHeader}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={26} color="#fff" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Item Details</Text>
+                <Text style={sharedStyles.headerTitle}>Item Details</Text>
             </View>
             <ScrollView
                 style={styles.scrollArea}
@@ -112,30 +113,30 @@ export default function ItemDetailsScreen({ route, navigation }) {
                     {imageUrl ? (
                         <Image
                             source={{uri: imageUrl}}
-                            style={isTablet ? styles.tabletImage : styles.mobileImage}
+                            style={isTablet ? styles.detailsTabletImage : styles.detailsMobileImage}
                             />
                     ) : (
-                        <View style={isTablet ? styles.tabletImagePlaceholder : styles.mobileImagePlaceholder} />
+                        <View style={isTablet ? styles.detailsTabletImagePlaceholder : styles.detailsMobileImagePlaceholder} />
                     )}
 
                     <View style={[styles.infoSection, isTablet && styles.tabletInfoSection]}>
                         <View style={styles.titleRow}>
-                            <Text style={styles.itemName}>{item.name || 'Menu Item'}</Text>
+                            <Text style={styles.detailsItemName}>{item.name || 'Menu Item'}</Text>
 
-                            <Text style={styles.price}>
+                            <Text style={styles.detailsPrice}>
                                 ${Number(item.price || 0).toFixed(2)}
                             </Text>
                         </View>
 
-                        <View style={styles.flagsRow}>
+                        <View style={styles.detailsFlagsRow}>
                             {flags.map((flag) => (
-                                <View key={flag} style={styles.flagBadge}>
-                                    <Text style={styles.flagText}>{formatFlag(flag)}</Text>
+                                <View key={flag} style={styles.detailsFlagBadge}>
+                                    <Text style={styles.detailsFlagText}>{formatFlag(flag)}</Text>
                                 </View>
                             ))}
                             {item.isSpecial ? (
-                                <View style={styles.specialBadge}>
-                                    <Text style={styles.specialText}>SP</Text>
+                                <View style={styles.detailsSpecialBadge}>
+                                    <Text style={styles.detailsSpecialText}>SP</Text>
                                 </View>
                             ): null}
                         </View>
@@ -174,217 +175,178 @@ export default function ItemDetailsScreen({ route, navigation }) {
         </View>
     );
 }
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#F4F7F7',
-  },
 
-  header: {
+const styles = StyleSheet.create({
+  detailsHeader: {
     height: 86,
-    backgroundColor: '#073F48',
+    backgroundColor: colors.primary,
     paddingTop: 34,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
-
   backButton: {
     marginRight: 8,
   },
-
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-
   scrollArea: {
     flex: 1,
   },
-
   content: {
     paddingBottom: 110,
   },
-
   tabletContent: {
     paddingHorizontal: 28,
     paddingTop: 26,
   },
-
   detailsContainer: {
     flex: 1,
   },
-
   tabletDetailsContainer: {
     flexDirection: 'row',
     gap: 28,
   },
-
-  mobileImage: {
+  detailsMobileImage: {
     width: '100%',
     height: 220,
     backgroundColor: '#D9D9D9',
   },
-
-  mobileImagePlaceholder: {
+  detailsMobileImagePlaceholder: {
     width: '100%',
     height: 220,
     backgroundColor: '#D9D9D9',
   },
-
-  tabletImage: {
+  detailsTabletImage: {
     width: '48%',
     height: 270,
     borderRadius: 7,
     backgroundColor: '#D9D9D9',
   },
-
-  tabletImagePlaceholder: {
+  detailsTabletImagePlaceholder: {
     width: '48%',
     height: 270,
     borderRadius: 7,
     backgroundColor: '#D9D9D9',
   },
-
   infoSection: {
     paddingHorizontal: 22,
     paddingTop: 22,
   },
-
   tabletInfoSection: {
     flex: 1,
     paddingHorizontal: 0,
     paddingTop: 5,
   },
-
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: 12,
   },
-
-  itemName: {
+  detailsItemName: {
     flex: 1,
-    color: '#073F48',
+    color: colors.primary,
     fontSize: 22,
     fontWeight: '700',
     lineHeight: 29,
   },
-
-  price: {
-    color: '#4AA9B8',
+  detailsPrice: {
+    color: colors.accent,
     fontSize: 22,
     fontWeight: '800',
   },
-
-  flagsRow: {
+  detailsFlagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 7,
     marginTop: 14,
     marginBottom: 18,
   },
-
-  flagBadge: {
-    backgroundColor: '#00C853',
+  detailsFlagBadge: {
+    backgroundColor: colors.success,
     borderRadius: 4,
     paddingHorizontal: 7,
     paddingVertical: 4,
   },
-
-  flagText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '900',
-  },
-
-  specialBadge: {
-    backgroundColor: '#FF9800',
+  detailsSpecialBadge: {
+    backgroundColor: colors.warning,
     borderRadius: 4,
     paddingHorizontal: 7,
     paddingVertical: 4,
   },
-
-  specialText: {
-    color: '#FFFFFF',
+  detailsFlagText: {
+    color: colors.white,
     fontSize: 10,
     fontWeight: '900',
   },
-
+  detailsSpecialText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '900',
+  },
   description: {
-    color: '#073F48',
+    color: colors.primary,
     fontSize: 14,
     lineHeight: 21,
     marginBottom: 24,
   },
-
   sectionLabel: {
-    color: '#073F48',
+    color: colors.primary,
     fontSize: 14,
     fontWeight: '700',
     marginBottom: 12,
   },
-
   quantityRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 24,
     marginBottom: 26,
   },
-
   quantityButton: {
     width: 43,
     height: 43,
     borderRadius: 22,
     borderWidth: 1.5,
-    borderColor: '#4AA9B8',
+    borderColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
-
   quantityButtonFilled: {
     width: 43,
     height: 43,
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#4AA9B8',
+    backgroundColor: colors.accent,
   },
-
   quantityText: {
-    color: '#073F48',
+    color: colors.primary,
     fontSize: 20,
     fontWeight: '800',
   },
-
   requestInput: {
     minHeight: 100,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 18,
     paddingTop: 16,
     paddingBottom: 16,
-    color: '#073F48',
-    backgroundColor: '#FFFFFF',
+    color: colors.primary,
+    backgroundColor: colors.white,
     textAlignVertical: 'top',
     marginBottom: 28,
   },
-
   addButton: {
     height: 56,
-    backgroundColor: '#4AA9B8',
+    backgroundColor: colors.accent,
     borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
   },
-
   addButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 17,
     fontWeight: '800',
   },

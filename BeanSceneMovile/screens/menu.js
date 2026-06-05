@@ -5,6 +5,7 @@ import { View, Text, StyleSheet,
 } from 'react-native'; 
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colors, styles as sharedStyles } from '../styles';
 
 const API_BASE_URL = 'https://beansceneorderingsystem.onrender.com';
 const MENU_URL = `${API_BASE_URL}/api/menu-items`;
@@ -128,7 +129,7 @@ export default function MenuScreen({navigation}) {
                 style={[styles.categoryButton, isSelected && styles.categoryButtonActive]}
                 onPress={() => setSelectedCategoryId(categoryId)}
             >
-                <Text style={[styles.categoryText, isSelected && styles.categoryButtonActive]}
+                <Text style={[styles.categoryText, isSelected && styles.categoryTextActive]}
                 onPress={() => setSelectedCategoryId(categoryId)}
                 >
                     {category.name}
@@ -183,9 +184,9 @@ export default function MenuScreen({navigation}) {
         );
     }
     return (
-        <View style={styles.screen}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Menu</Text>
+        <View style={sharedStyles.screen}>
+            <View style={sharedStyles.header}>
+                <Text style={sharedStyles.headerTitle}>Menu</Text>
             </View>
             <View style={styles.categorySection}>
                 <ScrollView
@@ -239,46 +240,18 @@ export default function MenuScreen({navigation}) {
         
     );
 }
+
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#F4F7F7',
-  },
-
-  header: {
-    height: 86,
-    backgroundColor: '#073F48',
-    paddingHorizontal: 22,
-    paddingTop: 34,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-
-  tableText: {
-    color: '#FFD325',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-
   categorySection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     paddingTop: 14,
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
-
   categoryContent: {
     paddingHorizontal: 18,
   },
-
   categoryButton: {
     height: 42,
     paddingHorizontal: 22,
@@ -288,70 +261,59 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-
   categoryButtonActive: {
-    backgroundColor: '#4AA9B8',
+    backgroundColor: colors.accent,
   },
-
   categoryText: {
-    color: '#073F48',
+    color: colors.primary,
     fontSize: 14,
     fontWeight: '700',
   },
-
   categoryTextActive: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
-
   fakeScrollRow: {
     marginTop: 9,
     paddingHorizontal: 8,
     flexDirection: 'row',
     alignItems: 'center',
   },
-
   fakeScrollTrack: {
     flex: 1,
     height: 13,
     justifyContent: 'center',
   },
-
   fakeScrollThumb: {
     height: 11,
     width: '55%',
     borderRadius: 10,
     backgroundColor: '#909090',
   },
-
   listContent: {
     paddingHorizontal: 18,
     paddingTop: 18,
     paddingBottom: 100,
   },
-
   tabletListContent: {
     paddingHorizontal: 26,
     paddingTop: 20,
   },
-
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#DDDDDD',
+    borderColor: colors.border,
     borderRadius: 7,
     padding: 14,
     marginBottom: 16,
     flexDirection: 'row',
     flex: 1,
   },
-
   tabletCard: {
     flexDirection: 'column',
     marginHorizontal: 8,
     padding: 18,
     minHeight: 220,
   },
-
   mobileImage: {
     width: 78,
     height: 78,
@@ -359,7 +321,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#D9D9D9',
     marginRight: 14,
   },
-
   mobileImagePlaceholder: {
     width: 78,
     height: 78,
@@ -367,7 +328,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#D9D9D9',
     marginRight: 14,
   },
-
   tabletImage: {
     width: '100%',
     height: 112,
@@ -375,7 +335,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#D9D9D9',
     marginBottom: 16,
   },
-
   tabletImagePlaceholder: {
     width: '100%',
     height: 112,
@@ -383,11 +342,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#D9D9D9',
     marginBottom: 16,
   },
-
   itemInfo: {
     flex: 1,
   },
-
   itemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -395,93 +352,79 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 10,
   },
-
   itemName: {
     flex: 1,
-    color: '#073F48',
+    color: colors.primary,
     fontSize: 17,
     fontWeight: '700',
   },
-
   itemPrice: {
-    color: '#4AA9B8',
+    color: colors.accent,
     fontSize: 16,
     fontWeight: '800',
   },
-
   itemDescription: {
-    color: '#073F48',
+    color: colors.primary,
     fontSize: 13,
     lineHeight: 18,
   },
-
   flagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
     marginTop: 12,
   },
-
   flagBadge: {
-    backgroundColor: '#00C853',
+    backgroundColor: colors.success,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 3,
   },
-
   flagText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 10,
     fontWeight: '800',
   },
-
   specialBadge: {
-    backgroundColor: '#FF9800',
+    backgroundColor: colors.warning,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 3,
   },
-
   specialText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 10,
     fontWeight: '800',
   },
-
   centerBox: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 25,
   },
-
   loadingText: {
     marginTop: 10,
-    color: '#073F48',
+    color: colors.primary,
     fontWeight: '600',
   },
-
   errorText: {
-    color: '#C0392B',
+    color: colors.danger,
     textAlign: 'center',
     fontWeight: '700',
     marginBottom: 14,
   },
-
   retryButton: {
-    backgroundColor: '#4AA9B8',
+    backgroundColor: colors.accent,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 7,
   },
-
   retryText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: '800',
   },
-
   emptyText: {
-    color: '#073F48',
+    color: colors.primary,
     fontWeight: '700',
   },
 });

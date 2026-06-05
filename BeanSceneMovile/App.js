@@ -4,7 +4,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { styles } from './styles';
 
 import LoginScreen from './screens/login.js';
 import MenuScreen from './screens/menu.js';
@@ -59,7 +61,7 @@ function BottomTabs({onLogout}) {
         if (route.name === 'Manager') {
           return <Ionicons name="settings-outline" size={23} color={color} />;
         }
-        return <Ionicons name="ellipse" size={size} color={color} />;
+        return <Ionicons name="ellipse" size={23} color={color} />;
       },
     })}
     >
@@ -106,7 +108,7 @@ export default function App() {
   }
   if (checkingLogin) {
     return (
-      <View style={styles.loadingScreen}>
+      <View style={styles.centeredContainer}>
         <ActivityIndicator size="large" color="#063F46" />
       </View>
     );
@@ -123,28 +125,3 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  loadingScreen: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F4F7F7',
-  },
-  header: {
-    backgroundColor: '#073B4C',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  tabBar: {
-    backgroundColor: '#073B4C',
-    height: 70,
-    paddingTop: 8,
-    paddingBottom: 8,
-    borderTopWidth: 0,
-  }, tabLabel: {
-    fontSize: 11,
-    marginTop: 2,
-  }
-})

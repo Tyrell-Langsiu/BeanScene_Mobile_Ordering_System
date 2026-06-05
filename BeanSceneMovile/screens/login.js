@@ -10,6 +10,7 @@ import {View,
     Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colors } from '../styles';
 
 const API_BASE_URL = 'https://beansceneorderingsystem.onrender.com';
 
@@ -57,7 +58,7 @@ export default function LoginScreen({ onLoginSuccess }) {
     }
     return (
         <KeyboardAvoidingView
-            style={styles.container}
+            style={styles.loginContainer}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
             <View style={styles.topSection}>
@@ -92,7 +93,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                     secureTextEntry
                 />
                 {errorMessage ? (
-                    <Text style={styles.errorText}>{errorMessage}</Text>
+                    <Text style={styles.loginErrorText}>{errorMessage}</Text>
                 ) : null}
                 <TouchableOpacity
                     style={[styles.loginButton, loading && styles.disabledButton]}
@@ -114,9 +115,9 @@ export default function LoginScreen({ onLoginSuccess }) {
 }
 
 const styles = StyleSheet.create({
-    container: {
+    loginContainer: {
         flex: 1,
-        backgroundColor: '#063f46',
+        backgroundColor: colors.primaryDark,
         justifyContent: 'center',
     },
     topSection: {
@@ -127,28 +128,28 @@ const styles = StyleSheet.create({
         width: 90,
         height: 90,
         borderRadius: 45,
-        backgroundColor: '#4AA9B8',
+        backgroundColor: colors.accent,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
     },
     logoText: {
-        color: '#fff',
+        color: colors.white,
         fontSize: 30,
         fontWeight: '800',
     },
     appTitle: {
-        color: '#C8D6D9',
+        color: colors.muted,
         fontSize: 30,
         fontWeight: '700',
     },
     appSubtitle: {
-        color: '#fff',
+        color: colors.white,
         fontSize: 13,
         marginTop: 4,
     },
     loginCard: {
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         borderRadius: 22,
         padding: 24,
         marginHorizontal: 22,
@@ -172,18 +173,18 @@ const styles = StyleSheet.create({
         borderColor: '#DFE5E6',
         borderRadius: 9,
         paddingHorizontal: 12,
-        backgroundColor: '#fff',
+        backgroundColor: colors.white,
         marginBottom: 15,
         color: '#222',
     },
-    errorText: {
-        color: '#C0392B',
+    loginErrorText: {
+        color: colors.danger,
         textAlign: 'center',
         marginBottom: 12,
         fontWeight: '600',
     },
     loginButton: {
-        backgroundColor: '#4AA9B8',
+        backgroundColor: colors.accent,
         height: 48,
         borderRadius: 9,
         justifyContent: 'center',
@@ -191,10 +192,10 @@ const styles = StyleSheet.create({
         marginTop: 5,
     },
     disabledButton: {
-        opacity: 0.7
+        opacity: 0.7,
     },
     loginButtonText: {
-        color: '#fff',
+        color: colors.white,
         fontWeight: '700',
         fontSize: 16,
     },
@@ -205,4 +206,3 @@ const styles = StyleSheet.create({
         fontSize: 13,
     },
 });
-
