@@ -37,7 +37,7 @@ export default function OrderScreen() {
                 tableRef: order.tableRef || order.tableId || 'Unknown',
                 status: order.status || 'in-progress',
                 orderTime: formatOrderTime(order.orderDateTime || order.createdAt),
-                total: order.total || calculateTotal(order.items),
+                total: order.total || calculateTotal(order.items || []),
                 items: order.items || [],
                 notes: order.notes || '',
             }));
@@ -62,6 +62,9 @@ export default function OrderScreen() {
         });
     }
     function calculateTotal(items) {
+        if (!Array.isArray(items)) {
+            return 0;
+        }
         return items.reduce((sum, item) => {
             return sum + (item.price || 0) * (item.quantity || 1);
         }, 0);

@@ -13,15 +13,16 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, styles as sharedStyles } from '../styles.js';
 import SelectedTableHeader from '../components/selectedTableheader.js';
+import { apiFetch } from '../components/apiFetch.js';
 
 const CART_KEY = 'beanSceneCart';
 const TABLE_KEY = 'selectedTable';
-
-const API_URL = 'https://beansceneorderingsystem.onrender.com/api/orders';
+const ORDERS_ENDPOINT = '/api/orders';
 
 export default function CartScreen() {
     const [cartItems, setCartItems] = useState([]);
-    const [tableRef, setTableRef] = useState();
+    const [tableRef, setTableRef] = useState(null);
+    const [tableId, setTableId] = useState(null);
     const { width } = useWindowDimensions();
 
     const isTablet = width >= 700;
@@ -42,11 +43,17 @@ export default function CartScreen() {
             else {
                 setCartItems([]);
             }
+
             if (storedTable) {
-                setTableRef(storedTable);
+                const selectedTable = JSON.parse(storedTable);
+                setTableRef(selectedTable.tableRef);
+                setTableId(selectedTable.tableId);
             }
         } catch (err) {
             console.log('Load order error: ', err);
+            setCartItems([]);
+            setTableRef(null);
+            setTableId(null);
         }
     };
     const saveCart = async (updatedCart) => {
@@ -81,48 +88,58 @@ export default function CartScreen() {
     };
 
     const submitOrder = async () => {
+        if (!tableRef || !tableId) {
+            Alert.alert(
+                'No Table Selected',
+                'Please select a table before submitting the order.'
+            );
+            return;
+        }
+
         if (cartItems.length === 0) {
-            Alert.alert('Empty Order', 'Please add items before submitting the order');
+            Alert.alert(
+                'Empty Order',
+                'Please add food items before submitting the order.'
+            );
             return;
         }
         try {
-            const token = await AsyncStorage.getItem('token');
             const orderData = {
                 tableRef: tableRef,
+                tableId: tableId,
                 items: cartItems.map((item) => ({
-                    menuItemId: item.id,
+                    menuItemId: item.menuItemId || item.id,
                     name: item.name,
-                    price: item.price,
-                    quantity: item.quantity,
-                    notes: item.notes || '',
+                    price: Number(item.price),
+                    quantity: Number(item.quantity),
+                    notes: item.notes || item.specialRequests || '',
+                    specialRequests: item.specialRequests || item.notes || '',
                 })),
                 status: 'in-progress',
                 notes: '',
+                total: subtotal,
                 orderDateTime: new Date().toISOString(),
             };
 
-            const response = await fetch(API_URL, {
+            await apiFetch(ORDERS_ENDPOINT, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? {Authorization: `Bearer ${token}`}:{}),
-                },
                 body: JSON.stringify(orderData),
             });
-            if (!response.ok) {
-                throw new Error('Failed to submit order');
-            }
 
             await AsyncStorage.removeItem(CART_KEY);
-            setCartItems([]);
+            await AsyncStorage.removeItem(TABLE_KEY);
 
-            Alert.alert('Success', 'Order submitted to kitchen.');
+            setCartItems([]);
+            setTableRef(null);
+            setTableId(null);
+
+            Alert.alert('Success', 'Order submitted to kitchen.')
         } catch (err) {
             console.log('Submit order error:', err);
 
             Alert.alert(
-                'Saved Locally',
-                'Could not connect to the server. The order remains saved on this device.'
+                'Order Failed',
+                err.message || 'Could not submit the order. Please try again.'
             );
         }
     };
