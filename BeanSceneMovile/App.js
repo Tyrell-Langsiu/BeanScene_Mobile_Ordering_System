@@ -16,10 +16,11 @@ import TableScreen from './screens/table.js';
 import CartScreen from './screens/cart.js';
 import ManagerScreen from './screens/manager.js';
 
+import StaffMemberScreen from './screens/managerScreens/staff.js';
+
 const Tab = createBottomTabNavigator();
 
 const MenuStack = createNativeStackNavigator();
-
 function MenuStackScreen() {
   return (
     <MenuStack.Navigator screenOptions={{headerShown: false}}>
@@ -27,6 +28,17 @@ function MenuStackScreen() {
       <MenuStack.Screen name="ItemDetails" component={ItemDetailsScreen} />
     </MenuStack.Navigator>
   )
+}
+const ManagerStack = createNativeStackNavigator();
+function ManagerStackScreen({ onLogout }) {
+  return (
+    <ManagerStack.Navigator screenOptions={{headerShown: false}}>
+      <ManagerStack.Screen name="Manage">
+        {(props) => <ManagerScreen {...props} onLogout={onLogout} />}
+      </ManagerStack.Screen>
+      <ManagerStack.Screen name="StaffMembers" component={StaffMemberScreen} />
+    </ManagerStack.Navigator>
+  );
 }
 
 function BottomTabs({onLogout}) {
@@ -70,7 +82,7 @@ function BottomTabs({onLogout}) {
       <Tab.Screen name="Cart" component={CartScreen} />
       <Tab.Screen name="Order" component={OrderScreen} />
       <Tab.Screen name="Manager">
-        {(props) => <ManagerScreen {...props} onLogout={onLogout} />}
+        {() => <ManagerStackScreen onLogout={onLogout} />}
       </Tab.Screen>
     </Tab.Navigator>
     );

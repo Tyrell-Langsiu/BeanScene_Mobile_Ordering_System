@@ -40,13 +40,13 @@ export default function ManagerScreen({ navigation, onLogout }) {
     }
 
     function goToViewUsers() {
-        navigation.navigate('ViewUsers');
+        navigation.navigate('StaffMembers');
     }
     function goToManageMenu() {
-        navigation.navigate('ManageMenu');
+        Alert.alert('Coming Soon', 'Menu management is not available yet.');
     }
     function goToReports() {
-        navigation.navigate('Reports');
+        Alert.alert('Coming Soon', 'Reports are not available yet.');
     }
 
     return (
