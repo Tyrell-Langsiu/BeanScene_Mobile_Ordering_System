@@ -17,6 +17,7 @@ import CartScreen from './screens/cart.js';
 import ManagerScreen from './screens/manager.js';
 
 import StaffMemberScreen from './screens/managerScreens/staff.js';
+import AddEditStaffScreen from './screens/managerScreens/addEditStaff.js';
 
 const Tab = createBottomTabNavigator();
 
@@ -37,6 +38,8 @@ function ManagerStackScreen({ onLogout }) {
         {(props) => <ManagerScreen {...props} onLogout={onLogout} />}
       </ManagerStack.Screen>
       <ManagerStack.Screen name="StaffMembers" component={StaffMemberScreen} />
+      <ManagerStack.Screen name="AddStaff" component={AddEditStaffScreen} />
+      <ManagerStack.Screen name="EditStaff" component = {AddEditStaffScreen} />
     </ManagerStack.Navigator>
   );
 }

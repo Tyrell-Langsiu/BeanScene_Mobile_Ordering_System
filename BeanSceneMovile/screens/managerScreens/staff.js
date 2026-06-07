@@ -74,10 +74,10 @@ export default function StaffMemberScreen({ navigation }) {
         return 'Active';
     }
     function goToAddStaff() {
-        Alert.alert('Coming Soon', 'Adding staff is not available yet.');
+       navigation.navigate('AddStaff');
     }
     function goToEditStaff(user) {
-        Alert.alert('Coming Soon', `Editing ${getName(user)} is not available yet.`);
+        navigation.navigate('EditStaff', { staff: user });
     }
     async function deleteStaff(user) {
         Alert.alert(
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
         flex: 0.7,
     },
     backButton: {
-        marginRIght: 12,
+        marginRight: 12,
         padding: 4,
     }
 });
