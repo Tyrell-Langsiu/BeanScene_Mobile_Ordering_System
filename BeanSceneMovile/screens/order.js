@@ -9,10 +9,11 @@ import {
     Alert,
     useWindowDimensions
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, styles as sharedStyles } from '../styles';
+import { apiFetch } from '../components/apiFetch';
+import SelectedTableHeader from '../components/selectedTableheader';
 
-const API_URL = 'https://beansceneorderingsystem.onrender.com/api/orders';
+const ORDERS_ENDPOINT = '/api/orders';
 
 export default function OrderScreen() {
     const  { width } = useWindowDimensions();
@@ -28,16 +29,8 @@ export default function OrderScreen() {
     async function loadOrders() {
         try {
             setLoading(true);
-            const token = await AsyncStorage.getItem('token');
-            const response = await fetch(API_URL, {
-                headers: {
-                    Authorization: token ? `Bearer ${token}` : '',
-                },
-            });
-            if (!response.ok) {
-                throw new Error('Failed to load orders');
-            }
-            const data = await response.json();
+            
+            const data = await apiFetch(ORDERS_ENDPOINT);
 
             const formattedOrders = data.map(order => ({
                 id: order._id || order.id,
@@ -75,19 +68,10 @@ export default function OrderScreen() {
     }
     async function markServed(orderId) {
         try {
-            const token = await AsyncStorage.getItem('token');
-
-            const response = await fetch(`${API_URL}/${orderId}`, {
+            await apiFetch(`${ORDERS_ENDPOINT}/${orderId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: token ? `Bearer ${token}` : '',
-                },
                 body: JSON.stringify({ status: 'completed' }),
             });
-            if (!response.ok) {
-                throw new Error('Failed to update order status');
-            }
             setOrders(currentOrders =>
                 currentOrders.map(order =>
                     order.id === orderId
@@ -100,14 +84,7 @@ export default function OrderScreen() {
             console.log(err);
             Alert.alert('Error', 'Unable to update order status. Please try again later.');
         }
-        if (loading) {
-            return (
-                <View style={sharedStyles.centeredContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={styles.loadingText}>Loading orders...</Text>
-                </View>
-            );
-        }
+        
     };
     const inProgressorders = orders.filter(
             order => order.status === 'in-progress'
@@ -117,11 +94,17 @@ export default function OrderScreen() {
     );
     const visibleOrders = 
         selectedTab === 'in-progress' ? inProgressorders : completedOrders;
+    if (loading) {
+        return (
+            <View style={sharedStyles.centeredContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={styles.loadingText}>Loading orders...</Text>
+            </View>
+        );
+    }
     return (
             <View style={sharedStyles.screen}>
-                <View style={sharedStyles.header}>
-                    <Text style={sharedStyles.headerTitle}>Menu</Text>
-                </View>
+                <SelectedTableHeader title="Order"/>
                 <View style={styles.tabRow}>
                     <TouchableOpacity
                         style={[

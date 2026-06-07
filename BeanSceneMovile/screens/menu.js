@@ -6,11 +6,11 @@ import { View, Text, StyleSheet,
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, styles as sharedStyles } from '../styles';
+import {apiFetch, API_BASE_URL} from '../components/apiFetch.js';
+import SelectedTableHeader from '../components/selectedTableheader.js';
 
-const API_BASE_URL = 'https://beansceneorderingsystem.onrender.com';
-const MENU_URL = `${API_BASE_URL}/api/menu-items`;
-const CATEGORIES_URL = `${API_BASE_URL}/api/categories`;
-
+const MENU_ENDPOINT = '/api/menu-items';
+const CATEGORIES_ENDPOINT = '/api/categories';
 export default function MenuScreen({navigation}) {
     const [menuItems, setMenuItems] = useState([]);
     const [categories, setCategories] = useState([{ id: 'all', name: 'Entrees'}]);
@@ -24,35 +24,16 @@ export default function MenuScreen({navigation}) {
         loadMenuData();
     }, []);
 
-    async function getHeaders() {
-        const token = await AsyncStorage.getItem('token');
-        return {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-        };
-    }
+    
     async function loadMenuData() {
         try {
             setLoading(true);
             setErrorMessage('');
-            const headers = await getHeaders();
-            const [menuResponse, categoriesResponse] = await Promise.all([
-                fetch(MENU_URL, { headers }),
-                fetch(CATEGORIES_URL, { headers }),
-            ]);
-            if (menuResponse.status === 401 || categoriesResponse.status === 401) {
-                setErrorMessage('Your session has expired. Please log in again.');
-                return;
-            }
-            if (!menuResponse.ok) {
-                throw new Error('Failed to load menu items');
-            }
-            if (!categoriesResponse.ok) {
-                throw new Error('Failed to load categories');
-            }
-            const menuData = await menuResponse.json();
-            const categoryData = await categoriesResponse.json();
 
+            const [menuData, categoryData] = await Promise.all([
+                apiFetch(MENU_ENDPOINT),
+                apiFetch(CATEGORIES_ENDPOINT),
+            ]);
             const loadedItems = Array.isArray(menuData)
                 ? menuData
                 : menuData.data || menuData.menuItems || menuData.items || [];
@@ -62,17 +43,19 @@ export default function MenuScreen({navigation}) {
             const activeCategories = loadedCategories
                 .filter((category) => category.isActive !== false)
                 .sort((a, b) => Number(a.displayOrder || 0) - Number(b.displayOrder || 0));
-            const availableItems = loadedItems.filter((item) => item.isAvailable !== false);
+            const availableItems = loadedItems.filter(
+                (item) => item.isAvailable !== false
+            );
+
             setCategories(activeCategories);
+            setMenuItems(availableItems);
 
             if (activeCategories.length > 0) {
                 setSelectedCategoryId(activeCategories[0].id || activeCategories[0]._id);
             }
-
-            setMenuItems(availableItems);
         } catch (err) {
             console.log(err);
-            setErrorMessage('Unable to load menu. check your internet connection and try again.');
+            setErrorMessage(err.message || 'Unable to load menu. Check your internet connection and try again');
         } finally {
             setLoading(false);
         }
@@ -183,11 +166,10 @@ export default function MenuScreen({navigation}) {
             </TouchableOpacity>
         );
     }
+    
     return (
         <View style={sharedStyles.screen}>
-            <View style={sharedStyles.header}>
-                <Text style={sharedStyles.headerTitle}>Menu</Text>
-            </View>
+            <SelectedTableHeader title="Menu" />
             <View style={styles.categorySection}>
                 <ScrollView
                     horizontal

@@ -11,8 +11,9 @@ import {View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../styles';
+import { apiFetch } from '../components/apiFetch.js';
 
-const API_BASE_URL = 'https://beansceneorderingsystem.onrender.com';
+const LOGIN_ENDPOINT = '/api/auth/login'
 
 export default function LoginScreen({ onLoginSuccess }) {
     const [email, setEmail] = useState('');
@@ -30,24 +31,18 @@ export default function LoginScreen({ onLoginSuccess }) {
                 setErrorMessage('Email and password are required.');
                 return;
             }
-            const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+            
+            const data = await apiFetch(LOGIN_ENDPOINT, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     email: email.trim().toLowerCase(),
                     password: password,
                 }),
             });
-
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.message || 'Login failed');
-            }
             
             await AsyncStorage.setItem('token', data.token);
             await AsyncStorage.setItem('user', JSON.stringify(data.user));
+
             onLoginSuccess(data.user);
         } catch (err) {
             console.log(err);

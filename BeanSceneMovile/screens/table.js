@@ -9,9 +9,10 @@ import {
     Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, styles as sharedStyles } from '../styles';
-
-const API_URL = 'https://beansceneorderingsystem.onrender.com/api/tables';
+import { styles as sharedStyles } from '../styles';
+import { apiFetch } from '../components/apiFetch.js';
+import SelectedTableHeader from '../components/selectedTableheader.js';
+const TABLES_ENDPOINT = '/api/tables'
 
 const fallbackTables = [
     ...Array.from({ length: 10}, (_, i) => ({
@@ -37,6 +38,8 @@ const fallbackTables = [
 export default function TableScreen({ navigation }) {
     const [tables, setTables] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedTableId, setSelectedTableId] = useState(null);
+    const [selectedTableRef, setSelectedTableRef] = useState('No table')
 
     useEffect(() => {
         loadTables();
@@ -45,18 +48,7 @@ export default function TableScreen({ navigation }) {
     const loadTables = async () => {
         try {
             setLoading(true);
-
-            const token = await AsyncStorage.getItem('token');
-            const response = await fetch(API_URL, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: token ? `Bearer ${token}`: '',
-                },
-            });
-            if (!response.ok) {
-                throw new Error('failed to load tables');
-            }
-            const data = await response.json();
+            const data = await apiFetch(TABLES_ENDPOINT);
             setTables(data);
         } catch (err) {
             console.log('Table fetch error', err.message);
@@ -71,17 +63,28 @@ export default function TableScreen({ navigation }) {
         Outside: tables.filter(table => table.area === 'Outside'),
         Balcony: tables.filter(table => table.area === 'Balcony'),
     };
-    const handleTablePress = (table) => {
+    const handleTablePress = async (table) => {
         if (table.status === 'occupied') {
             Alert.alert('Table Occupied', 'This table is currently occupied. Please select another table.');
             return;
         }
-        navigation.navigate('Order', {
+        if (selectedTableId === table.id) {
+            setSelectedTableId(null);
+            setSelectedTableRef('No Table');
+            await AsyncStorage.removeItem('selectedTable');
+            return;
+        }
+
+        setSelectedTableId(table.id);
+        setSelectedTableRef(table.tableRef);
+
+        await AsyncStorage.setItem('selectedTable', JSON.stringify({
             tableRef: table.tableRef,
             tableId: table.id,
-        });
+        }));
     };
     const renderTableButton = (table) => {
+        const isSelected = selectedTableId === table.id;
         return (
             <TouchableOpacity
                 key={table.id}
@@ -90,6 +93,7 @@ export default function TableScreen({ navigation }) {
                     table.status === 'available' && styles.availableTable,
                     table.status === 'occupied' && styles.occupiedTable,
                     table.status === 'reserved' && styles.reservedTable,
+                    isSelected && styles.selectedTable,
                 ]}
                 onPress={() => handleTablePress(table)}
                 activeOpacity={0.8}
@@ -100,6 +104,7 @@ export default function TableScreen({ navigation }) {
                         table.status === 'available' && styles.availableText,
                         table.status === 'occupied' && styles.occupiedText,
                         table.status === 'reserved' && styles.reservedText,
+                        isSelected && styles.selectedTableText,
                     ]}
                 >
                     {table.tableRef}
@@ -129,9 +134,7 @@ export default function TableScreen({ navigation }) {
     
     return (
         <View style={sharedStyles.screen}>
-            <View style={sharedStyles.header}>
-                <Text style={sharedStyles.headerTitle}>Select Tables</Text>
-            </View>
+            <SelectedTableHeader title={"Tables"} selectedTableRef={selectedTableRef} />
             <View style={styles.legendContainer}>
                 <View style={styles.legendItem}>
                     <View style={[styles.legendDot, styles.availableDot]} />
@@ -264,5 +267,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#F5F7F8',
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    selectedTable: {
+        backgroundColor: '#D1D5DB',
+        borderColor: '#6B7280',
+    },
+    selectedTableText: {
+        color: '#374151'
     }
 });

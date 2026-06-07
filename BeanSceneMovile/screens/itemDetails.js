@@ -8,11 +8,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, styles as sharedStyles } from '../styles';
+import SelectedTableHeader from '../components/selectedTableheader.js';
 
 const API_BASE_URL = 'https://beansceneorderingsystem.onrender.com';
 const CART_KEY = 'beanSceneCart';
 
-export default function ItemDetailsScreen({ route, navigation }) {
+export default function ItemDetailsScreen({ route, navigation, showBack = false, onBack,}) {
     const {item} = route.params;
 
     const [quantity, setQuantity] = useState(1);
@@ -123,12 +124,10 @@ export default function ItemDetailsScreen({ route, navigation }) {
 
     return (
         <View style={sharedStyles.screen}>
-            <View style={styles.detailsHeader}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="chevron-back" size={26} color="#fff" />
-                </TouchableOpacity>
-                <Text style={sharedStyles.headerTitle}>Item Details</Text>
-            </View>
+            <SelectedTableHeader
+              title="Item Details"
+              showBack={true}
+              onBack={() => navigation.goBack()} />
             <ScrollView
                 style={styles.scrollArea}
                 contentContainerStyle={[

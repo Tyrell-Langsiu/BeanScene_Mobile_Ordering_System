@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, styles as sharedStyles } from '../styles.js';
+import SelectedTableHeader from '../components/selectedTableheader.js';
 
 const CART_KEY = 'beanSceneCart';
 const TABLE_KEY = 'selectedTable';
@@ -130,9 +131,7 @@ export default function CartScreen() {
 
     return (
         <View style={sharedStyles.screen}>
-            <View style={sharedStyles.header}>
-                <Text style={sharedStyles.headerTitle}>Cart</Text>
-            </View>
+            <SelectedTableHeader title="Cart"/>
             <ScrollView contentContainerStyle={styles.content}>
                 {cartItems.length === 0 ? (
                     <View style={styles.emptyBox}>
