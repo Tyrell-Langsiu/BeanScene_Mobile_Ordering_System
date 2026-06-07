@@ -43,7 +43,7 @@ export default function ManagerScreen({ navigation, onLogout }) {
         navigation.navigate('StaffMembers');
     }
     function goToManageMenu() {
-        Alert.alert('Coming Soon', 'Menu management is not available yet.');
+        navigation.navigate('ManageMenu');
     }
     function goToReports() {
         Alert.alert('Coming Soon', 'Reports are not available yet.');
