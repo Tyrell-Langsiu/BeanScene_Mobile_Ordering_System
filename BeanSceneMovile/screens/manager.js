@@ -48,7 +48,7 @@ export default function ManagerScreen({ navigation, onLogout, user }) {
         navigation.navigate('ManageMenu');
     }
     function goToReports() {
-        Alert.alert('Coming Soon', 'Reports are not available yet.');
+       navigation.navigate('Reports');
     }
 
     return (

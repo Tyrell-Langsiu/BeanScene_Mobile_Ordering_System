@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
     View,
     Text,
@@ -9,10 +9,12 @@ import {
     Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { styles as sharedStyles } from '../styles';
 import { apiFetch } from '../components/apiFetch.js';
 import SelectedTableHeader from '../components/selectedTableheader.js';
-const TABLES_ENDPOINT = '/api/tables'
+const TABLES_ENDPOINT = '/api/tables';
+const ORDERS_ENDPOINT = '/api/orders';
 
 const fallbackTables = [
     ...Array.from({ length: 10}, (_, i) => ({
@@ -41,23 +43,95 @@ export default function TableScreen({ navigation }) {
     const [selectedTableId, setSelectedTableId] = useState(null);
     const [selectedTableRef, setSelectedTableRef] = useState('No table')
 
-    useEffect(() => {
-        loadTables();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            loadTables();
+        }, [])
+    );
 
     const loadTables = async () => {
         try {
             setLoading(true);
-            const data = await apiFetch(TABLES_ENDPOINT);
-            setTables(data);
+            const [tableData, orderData] = await Promise.all([
+                apiFetch(TABLES_ENDPOINT).catch((err) => {
+                    console.log('Table fetch error', err.message);
+                    return fallbackTables;
+                }),
+                apiFetch(ORDERS_ENDPOINT).catch((err) => {
+                    console.log('Order fetch error', err.message);
+                    return [];
+                }),
+            ]);
+
+            const updatedTables = applyOrderStatuses(tableData, orderData);
+
+            setTables(updatedTables);
+            await clearSelectedTableIfOccupied(updatedTables);
         } catch (err) {
-            console.log('Table fetch error', err.message);
+            console.log('Load tables error', err.message);
 
             setTables(fallbackTables);
         } finally {
             setLoading(false);
         }
     };
+
+    function getTableId(table) {
+        return table.id || table._id || table.tableId || table.tableRef;
+    }
+
+    function hasInProgressOrder(table, orders) {
+        const tableId = getTableId(table);
+
+        return orders.some(order => {
+            const orderStatus = order.status || 'in-progress';
+
+            return (
+                orderStatus === 'in-progress' &&
+                (
+                    String(order.tableId || '') === String(tableId) ||
+                    String(order.tableRef || '') === String(table.tableRef)
+                )
+            );
+        });
+    }
+
+    function applyOrderStatuses(tableData, orderData) {
+        const tableList = Array.isArray(tableData) ? tableData : [];
+        const orderList = Array.isArray(orderData) ? orderData : [];
+
+        return tableList.map(table => {
+            if (!hasInProgressOrder(table, orderList)) {
+                return table;
+            }
+
+            return {
+                ...table,
+                status: 'occupied',
+            };
+        });
+    }
+
+    async function clearSelectedTableIfOccupied(tableList) {
+        const savedTable = await AsyncStorage.getItem('selectedTable');
+
+        if (!savedTable) return;
+
+        const selectedTable = JSON.parse(savedTable);
+        const matchingTable = tableList.find(table => {
+            return (
+                String(getTableId(table)) === String(selectedTable.tableId) ||
+                String(table.tableRef) === String(selectedTable.tableRef)
+            );
+        });
+
+        if (matchingTable?.status === 'occupied') {
+            setSelectedTableId(null);
+            setSelectedTableRef('No Table');
+            await AsyncStorage.removeItem('selectedTable');
+        }
+    }
+
     const groupedTables = {
         Main: tables.filter(table => table.area === 'Main'),
         Outside: tables.filter(table => table.area === 'Outside'),
@@ -68,26 +142,29 @@ export default function TableScreen({ navigation }) {
             Alert.alert('Table Occupied', 'This table is currently occupied. Please select another table.');
             return;
         }
-        if (selectedTableId === table.id) {
+        const tableId = getTableId(table);
+
+        if (selectedTableId === tableId) {
             setSelectedTableId(null);
             setSelectedTableRef('No Table');
             await AsyncStorage.removeItem('selectedTable');
             return;
         }
 
-        setSelectedTableId(table.id);
+        setSelectedTableId(tableId);
         setSelectedTableRef(table.tableRef);
 
         await AsyncStorage.setItem('selectedTable', JSON.stringify({
             tableRef: table.tableRef,
-            tableId: table.id,
+            tableId,
         }));
     };
     const renderTableButton = (table) => {
-        const isSelected = selectedTableId === table.id;
+        const tableId = getTableId(table);
+        const isSelected = selectedTableId === tableId;
         return (
             <TouchableOpacity
-                key={table.id}
+                key={tableId}
                 style={[
                     styles.tableButton,
                     table.status === 'available' && styles.availableTable,
