@@ -13,11 +13,14 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { colors, styles as sharedStyles } from '../../styles';
 import { apiFetch } from '../../components/apiFetch';
+import { sortWithDataStructures } from '../../components/sort';
 
 const STAFF_ENDPOINT = '/api/staff';
 
 export default function StaffMemberScreen({ navigation }) {
     const [staffMembers, setStaffMembers] = useState([]);
+    const [sortBy, setSortBy] = useState('sortName');
+    const [sortDirection, setSortDirection] = useState('asc');
     const [loading, setLoading] = useState(true);
 
     const {width} = useWindowDimensions();
@@ -40,7 +43,7 @@ export default function StaffMemberScreen({ navigation }) {
                 user.role === 'manager'
             );
 
-            setStaffMembers(staffOnly);
+            setStaffMembers(staffOnly.map(user => addStaffSortFields(user)));
         } catch (err) {
             console.log(err);
         } finally {
@@ -71,7 +74,32 @@ export default function StaffMemberScreen({ navigation }) {
     function getStatus(user) {
         if (user.status) return user.status;
         if (user.active === false) return 'Inactive';
+        if (user.isActive === false) return 'Inactive';
         return 'Active';
+    }
+    function addStaffSortFields(user) {
+        return {
+            ...user,
+            sortName: getName(user),
+            sortRole: getRole(user),
+            sortStatus: getStatus(user),
+        };
+    }
+    const sortedStaffMembers = sortWithDataStructures(staffMembers, sortBy, sortDirection);
+    const sortOptions = [
+        { label: 'Name', value: 'sortName' },
+        { label: 'Role', value: 'sortRole' },
+        { label: 'Status', value: 'sortStatus' },
+    ];
+
+    function chooseSort(value) {
+        if (sortBy === value) {
+            setSortDirection(current => current === 'asc' ? 'desc' : 'asc');
+            return;
+        }
+
+        setSortBy(value);
+        setSortDirection('asc');
     }
     function goToAddStaff() {
        navigation.navigate('AddStaff');
@@ -181,7 +209,7 @@ export default function StaffMemberScreen({ navigation }) {
                     <Text style={[styles.tableHeaderText, styles.statusColumn]}>Status</Text>
                     <Text style={[styles.tableHeaderText, styles.actionsColumn]}>Actions</Text>
                 </View>
-                {staffMembers.map(user => {
+                {sortedStaffMembers.map(user => {
                     const name = getName(user);
                     const role = getRole(user);
                     const status = getStatus(user);
@@ -253,7 +281,34 @@ export default function StaffMemberScreen({ navigation }) {
                     {isTablet && <Text style={styles.addStaffText}>Add Staff</Text>}
                 </TouchableOpacity>
             <ScrollView contentContainerStyle={styles.content}>
-                {isTablet ? renderTabletTable() : staffMembers.map(user => renderMobileCard(user))}
+                <View style={styles.sortRow}>
+                    {sortOptions.map(option => (
+                        <TouchableOpacity
+                            key={option.value}
+                            style={[
+                                styles.sortButton,
+                                sortBy === option.value && styles.sortButtonActive,
+                            ]}
+                            onPress={() => chooseSort(option.value)}
+                            activeOpacity={0.85}>
+                            <Text
+                                style={[
+                                    styles.sortButtonText,
+                                    sortBy === option.value && styles.sortButtonTextActive,
+                                ]}>
+                                {option.label}
+                            </Text>
+                            {sortBy === option.value && (
+                                <Ionicons
+                                    name={sortDirection === 'asc' ? 'arrow-up' : 'arrow-down'}
+                                    size={14}
+                                    color={colors.white}
+                                />
+                            )}
+                        </TouchableOpacity>
+                    ))}
+                </View>
+                {isTablet ? renderTabletTable() : sortedStaffMembers.map(user => renderMobileCard(user))}
             </ScrollView>
         </View>
     );
@@ -301,6 +356,35 @@ const styles = StyleSheet.create({
         color: colors.primary,
         fontWeight: '700',
         fontSize: 15,
+    },
+    sortRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 12,
+    },
+    sortButton: {
+        minHeight: 36,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#DDE5E7',
+        paddingHorizontal: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        backgroundColor: '#F7FAFA',
+    },
+    sortButtonActive: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    sortButtonText: {
+        color: colors.primary,
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    sortButtonTextActive: {
+        color: colors.white,
     },
 
     staffCard: {

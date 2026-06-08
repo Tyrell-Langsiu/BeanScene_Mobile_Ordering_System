@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { styles as sharedStyles } from '../styles';
 import { apiFetch } from '../components/apiFetch.js';
+import { CACHE_KEYS, getCache, setCache } from '../components/cache.js';
 import SelectedTableHeader from '../components/selectedTableheader.js';
 const TABLES_ENDPOINT = '/api/tables';
 const ORDERS_ENDPOINT = '/api/orders';
@@ -52,25 +53,46 @@ export default function TableScreen({ navigation }) {
     const loadTables = async () => {
         try {
             setLoading(true);
+
+            const cachedTables = await getCache(CACHE_KEYS.tables, []);
+            const cachedOrders = await getCache(CACHE_KEYS.tableOrders, []);
+
+            if (cachedTables.length > 0) {
+                const cachedUpdatedTables = applyOrderStatuses(cachedTables, cachedOrders);
+
+                setTables(cachedUpdatedTables);
+                await clearSelectedTableIfOccupied(cachedUpdatedTables);
+                setLoading(false);
+            }
+
             const [tableData, orderData] = await Promise.all([
                 apiFetch(TABLES_ENDPOINT).catch((err) => {
                     console.log('Table fetch error', err.message);
-                    return fallbackTables;
+                    return cachedTables.length > 0 ? cachedTables : fallbackTables;
                 }),
                 apiFetch(ORDERS_ENDPOINT).catch((err) => {
                     console.log('Order fetch error', err.message);
-                    return [];
+                    return cachedOrders;
                 }),
             ]);
 
             const updatedTables = applyOrderStatuses(tableData, orderData);
 
             setTables(updatedTables);
+            await setCache(CACHE_KEYS.tables, Array.isArray(tableData) ? tableData : []);
+            await setCache(CACHE_KEYS.tableOrders, Array.isArray(orderData) ? orderData : []);
             await clearSelectedTableIfOccupied(updatedTables);
         } catch (err) {
             console.log('Load tables error', err.message);
 
-            setTables(fallbackTables);
+            const cachedTables = await getCache(CACHE_KEYS.tables, []);
+            const cachedOrders = await getCache(CACHE_KEYS.tableOrders, []);
+
+            if (cachedTables.length > 0) {
+                setTables(applyOrderStatuses(cachedTables, cachedOrders));
+            } else {
+                setTables(fallbackTables);
+            }
         } finally {
             setLoading(false);
         }

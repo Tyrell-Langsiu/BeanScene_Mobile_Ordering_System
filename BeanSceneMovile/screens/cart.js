@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, styles as sharedStyles } from '../styles.js';
 import SelectedTableHeader from '../components/selectedTableheader.js';
 import { apiFetch } from '../components/apiFetch.js';
+import { CACHE_KEYS, getCache, removeCache, setCache } from '../components/cache.js';
 
 const CART_KEY = 'beanSceneCart';
 const TABLE_KEY = 'selectedTable';
@@ -34,11 +35,17 @@ export default function CartScreen() {
     );
     const loadOrder = async () => {
         try {
-            const storedCart = await AsyncStorage.getItem(CART_KEY);
+            const storedCart = await getCache(CACHE_KEYS.cart, null);
+            const oldStoredCart = storedCart ? null : await AsyncStorage.getItem(CART_KEY);
             const storedTable = await AsyncStorage.getItem(TABLE_KEY);
 
             if (storedCart) {
-                setCartItems(JSON.parse(storedCart));
+                setCartItems(storedCart);
+            } else if (oldStoredCart) {
+                const parsedCart = JSON.parse(oldStoredCart);
+
+                setCartItems(parsedCart);
+                await setCache(CACHE_KEYS.cart, parsedCart);
             }
             else {
                 setCartItems([]);
@@ -58,6 +65,7 @@ export default function CartScreen() {
     };
     const saveCart = async (updatedCart) => {
         setCartItems(updatedCart);
+        await setCache(CACHE_KEYS.cart, updatedCart);
         await AsyncStorage.setItem(CART_KEY, JSON.stringify(updatedCart));
     };
     const increaseQty = (cartItemId) => {
@@ -126,6 +134,10 @@ export default function CartScreen() {
                 body: JSON.stringify(orderData),
             });
 
+            await removeCache(CACHE_KEYS.cart);
+            await removeCache(CACHE_KEYS.orders);
+            await removeCache(CACHE_KEYS.tableOrders);
+            await removeCache(CACHE_KEYS.tables);
             await AsyncStorage.removeItem(CART_KEY);
             await AsyncStorage.removeItem(TABLE_KEY);
 

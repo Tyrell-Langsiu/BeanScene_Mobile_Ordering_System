@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
     View, Text, StyleSheet,
     Image, ScrollView, TextInput,
@@ -6,16 +6,15 @@ import {
     Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, styles as sharedStyles } from '../styles';
 import SelectedTableHeader from '../components/selectedTableheader.js';
 import { API_BASE_URL } from '../components/apiFetch.js';
-
-const CART_KEY = 'beanSceneCart';
+import { CACHE_KEYS, getCache, setCache } from '../components/cache.js';
 
 export default function ItemDetailsScreen({ route, navigation, showBack = false, onBack,}) {
     const {item} = route.params;
 
+    const [displayItem, setDisplayItem] = useState(item);
     const [quantity, setQuantity] = useState(1);
     const [specialRequests, setSpecialRequests] = useState('');
 
@@ -23,11 +22,33 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
     const isTablet = width >= 700;
 
     const totalPrice = useMemo(() => {
-        return Number(item.price || 0) * quantity;
-    }, [item.price, quantity]);
+        return Number(displayItem.price || 0) * quantity;
+    }, [displayItem.price, quantity]);
+
+    useEffect(() => {
+        loadCachedItemDetails();
+    }, []);
+
+    async function loadCachedItemDetails() {
+        const itemId = item.id || item._id;
+
+        if (!itemId) return;
+
+        const cacheKey = CACHE_KEYS.menuItemDetails(itemId);
+        const cachedItem = await getCache(cacheKey, null);
+
+        if (cachedItem) {
+            setDisplayItem({
+                ...cachedItem,
+                ...item,
+            });
+        }
+
+        await setCache(cacheKey, item);
+    }
 
     function getImageUrl() {
-        const image = item.photoUrl || item.imageUrl || item.photo || item.image;
+        const image = displayItem.photoUrl || displayItem.imageUrl || displayItem.photo || displayItem.image;
 
         if (!image) return null;
         if (image.startsWith('http')) {
@@ -36,7 +57,7 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
         return `${API_BASE_URL}${image}`;
     }
     function getDietaryFlags() {
-        const flags = item.dietaryFlags || item.dietary || [];
+        const flags = displayItem.dietaryFlags || displayItem.dietary || [];
 
         if (Array.isArray(flags)) {
             return flags;
@@ -74,15 +95,14 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
     }
     async function addToCart() {
         try {
-            const existingCart = await AsyncStorage.getItem(CART_KEY);
-            const cart = existingCart ? JSON.parse(existingCart) : [];
+            const cart = await getCache(CACHE_KEYS.cart, []);
 
             const cartItem = {
-                cartItemId: `${item.id || item._id}-${Date.now()}`,
-                id: item.id || item._id,
-                menuItemId: item.id || item._id,
-                name: item.name,
-                price: Number(item.price || 0),
+                cartItemId: `${displayItem.id || displayItem._id}-${Date.now()}`,
+                id: displayItem.id || displayItem._id,
+                menuItemId: displayItem.id || displayItem._id,
+                name: displayItem.name,
+                price: Number(displayItem.price || 0),
                 quantity: quantity,
                 notes: specialRequests,
                 specialRequests: specialRequests,
@@ -113,9 +133,9 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
               updatedCart = [...cart, cartItem];
             }
 
-            await AsyncStorage.setItem(CART_KEY, JSON.stringify(updatedCart));
+            await setCache(CACHE_KEYS.cart, updatedCart);
 
-            Alert.alert('Adding to Cart', `${item.name} has been added to the cart`);
+            Alert.alert('Adding to Cart', `${displayItem.name} has been added to the cart`);
 
             navigation.navigate('MenuList');
         } catch (err) {
@@ -153,10 +173,10 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
 
                     <View style={[styles.infoSection, isTablet && styles.tabletInfoSection]}>
                         <View style={styles.titleRow}>
-                            <Text style={styles.detailsItemName}>{item.name || 'Menu Item'}</Text>
+                            <Text style={styles.detailsItemName}>{displayItem.name || 'Menu Item'}</Text>
 
                             <Text style={styles.detailsPrice}>
-                                ${Number(item.price || 0).toFixed(2)}
+                                ${Number(displayItem.price || 0).toFixed(2)}
                             </Text>
                         </View>
 
@@ -166,7 +186,7 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
                                     <Text style={styles.detailsFlagText}>{formatFlag(flag)}</Text>
                                 </View>
                             ))}
-                            {item.isSpecial ? (
+                            {displayItem.isSpecial ? (
                                 <View style={styles.detailsSpecialBadge}>
                                     <Text style={styles.detailsSpecialText}>SP</Text>
                                 </View>
@@ -174,7 +194,7 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
                         </View>
 
                         <Text style={styles.description}>
-                            {item.description || 'No description available'}
+                            {displayItem.description || 'No description available'}
                         </Text>
                         <Text style={styles.sectionLabel}>Quantity</Text>
                         <View style={styles.quantityRow}>

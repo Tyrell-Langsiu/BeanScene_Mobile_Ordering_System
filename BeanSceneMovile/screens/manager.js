@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, styles as sharedStyles} from '../styles.js';
+import { CACHE_KEYS, removeCache } from '../components/cache.js';
 
 export default function ManagerScreen({ navigation, onLogout, user }) {
     const isManager = user?.role === 'manager';
@@ -31,6 +32,10 @@ export default function ManagerScreen({ navigation, onLogout, user }) {
                         await AsyncStorage.removeItem('user');
                         await AsyncStorage.removeItem('selectedTable');
                         await AsyncStorage.removeItem('beanSceneCart');
+                        await removeCache(CACHE_KEYS.cart);
+                        await removeCache(CACHE_KEYS.orders);
+                        await removeCache(CACHE_KEYS.tableOrders);
+                        await removeCache(CACHE_KEYS.tables);
 
                         if (onLogout) {
                             onLogout();
