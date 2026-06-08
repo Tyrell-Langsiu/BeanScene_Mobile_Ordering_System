@@ -12,9 +12,23 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, styles as sharedStyles} from '../styles.js';
 import { CACHE_KEYS, removeCache } from '../components/cache.js';
 
+/**
+ * Shows manager/staff navigation actions and handles logout cleanup.
+ *
+ * @param {object} props Screen props.
+ * @param {object} props.navigation React Navigation object.
+ * @param {Function} props.onLogout Clears the active app session.
+ * @param {object} props.user Logged-in staff or manager account.
+ * @returns {React.ReactElement} Manager hub screen.
+ */
 export default function ManagerScreen({ navigation, onLogout, user }) {
     const isManager = user?.role === 'manager';
 
+    /**
+     * Confirms logout, removes auth and cache data, and returns to the login screen.
+     *
+     * @returns {Promise<void>} Resolves after logout is confirmed and local data is cleared.
+     */
     async function handleLogout() {
         Alert.alert(
             'Log Out',
@@ -46,12 +60,27 @@ export default function ManagerScreen({ navigation, onLogout, user }) {
         );
     }
 
+    /**
+     * Opens staff account management.
+     *
+     * @returns {void}
+     */
     function goToViewUsers() {
         navigation.navigate('StaffMembers');
     }
+    /**
+     * Opens menu item and category management.
+     *
+     * @returns {void}
+     */
     function goToManageMenu() {
         navigation.navigate('ManageMenu');
     }
+    /**
+     * Opens manager reporting.
+     *
+     * @returns {void}
+     */
     function goToReports() {
        navigation.navigate('Reports');
     }

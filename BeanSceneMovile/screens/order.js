@@ -18,6 +18,11 @@ import { CACHE_KEYS, getCache, setCache } from '../components/cache';
 
 const ORDERS_ENDPOINT = '/api/orders';
 
+/**
+ * Displays in-progress and completed orders for kitchen/service workflow.
+ *
+ * @returns {React.ReactElement} Order management screen.
+ */
 export default function OrderScreen() {
     const  { width } = useWindowDimensions();
     const cardWidth = width >= 700 ? '48%' : '100%';
@@ -31,6 +36,11 @@ export default function OrderScreen() {
         loadOrders();
     }, []);
 
+    /**
+     * Loads orders from cache first, then refreshes them from the backend when available.
+     *
+     * @returns {Promise<void>} Resolves after order state has been loaded.
+     */
     async function loadOrders() {
         try {
             setLoading(true);
@@ -66,6 +76,12 @@ export default function OrderScreen() {
             setLoading(false);
         }
     }
+    /**
+     * Converts raw backend orders into the UI shape used by this screen.
+     *
+     * @param {object[]} data Raw order records.
+     * @returns {object[]} Formatted order records.
+     */
     function formatOrders(data) {
         if (!Array.isArray(data)) return [];
 
@@ -85,6 +101,12 @@ export default function OrderScreen() {
             };
         });
     }
+    /**
+     * Formats an order date value as a short display time.
+     *
+     * @param {string|number|object} dateValue Backend date value.
+     * @returns {string} Display time.
+     */
     function formatOrderTime(dateValue) {
         if (!dateValue) return 'Now';
 
@@ -101,6 +123,12 @@ export default function OrderScreen() {
             minute: '2-digit',
         });
     }
+    /**
+     * Converts an order date value into a timestamp for sorting.
+     *
+     * @param {string|number|object} dateValue Backend date value.
+     * @returns {number} Timestamp in milliseconds.
+     */
     function getOrderTimestamp(dateValue) {
         if (!dateValue) return Date.now();
 
@@ -114,6 +142,12 @@ export default function OrderScreen() {
 
         return date.getTime();
     }
+    /**
+     * Calculates an order total from its item prices and quantities.
+     *
+     * @param {object[]} items Order item records.
+     * @returns {number} Calculated total.
+     */
     function calculateTotal(items) {
         if (!Array.isArray(items)) {
             return 0;
@@ -122,6 +156,12 @@ export default function OrderScreen() {
             return sum + (item.price || 0) * (item.quantity || 1);
         }, 0);
     }
+    /**
+     * Marks an in-progress order as completed and updates the local order cache.
+     *
+     * @param {string} orderId Order identifier.
+     * @returns {Promise<void>} Resolves after the backend update completes.
+     */
     async function markServed(orderId) {
         try {
             await apiFetch(`${ORDERS_ENDPOINT}/${orderId}/status`, {
@@ -163,6 +203,12 @@ export default function OrderScreen() {
         { label: 'Items', value: 'itemCount' },
     ];
 
+    /**
+     * Changes the active sort field or toggles sort direction for the current field.
+     *
+     * @param {string} value Sort field key.
+     * @returns {void}
+     */
     function chooseSort(value) {
         if (sortBy === value) {
             setSortDirection(current => current === 'asc' ? 'desc' : 'asc');

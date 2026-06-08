@@ -20,6 +20,11 @@ const CART_KEY = 'beanSceneCart';
 const TABLE_KEY = 'selectedTable';
 const ORDERS_ENDPOINT = '/api/orders';
 
+/**
+ * Shows the active cart, lets staff update quantities, and submits the order.
+ *
+ * @returns {React.ReactElement} Cart and order submission screen.
+ */
 export default function CartScreen() {
     const [cartItems, setCartItems] = useState([]);
     const [tableRef, setTableRef] = useState(null);
@@ -33,6 +38,11 @@ export default function CartScreen() {
             loadOrder();
         }, [])
     );
+    /**
+     * Loads cart contents and the currently selected table from local storage.
+     *
+     * @returns {Promise<void>} Resolves after local order state is restored.
+     */
     const loadOrder = async () => {
         try {
             const storedCart = await getCache(CACHE_KEYS.cart, null);
@@ -63,11 +73,23 @@ export default function CartScreen() {
             setTableId(null);
         }
     };
+    /**
+     * Saves updated cart contents to state and persistent cache.
+     *
+     * @param {object[]} updatedCart Cart items to persist.
+     * @returns {Promise<void>} Resolves after the cart is saved.
+     */
     const saveCart = async (updatedCart) => {
         setCartItems(updatedCart);
         await setCache(CACHE_KEYS.cart, updatedCart);
         await AsyncStorage.setItem(CART_KEY, JSON.stringify(updatedCart));
     };
+    /**
+     * Increases the quantity of one cart line item.
+     *
+     * @param {string} cartItemId Unique cart item ID.
+     * @returns {void}
+     */
     const increaseQty = (cartItemId) => {
         const updatedCart = cartItems.map((item) =>
             item.cartItemId === cartItemId
@@ -76,6 +98,12 @@ export default function CartScreen() {
          saveCart(updatedCart);
     };
 
+    /**
+     * Decreases a cart line item quantity while keeping the minimum at one.
+     *
+     * @param {string} cartItemId Unique cart item ID.
+     * @returns {void}
+     */
     const decreaseQty = (cartItemId) => {
         const updatedCart = cartItems
         .map((item) =>
@@ -85,16 +113,32 @@ export default function CartScreen() {
         );
         saveCart(updatedCart);
     }
+    /**
+     * Removes one cart line item and saves the updated cart.
+     *
+     * @param {string} cartItemId Unique cart item ID.
+     * @returns {void}
+     */
     const removeItem = (cartItemId) => {
         const updatedCart = cartItems.filter((item) => item.cartItemId !== cartItemId);
         saveCart(updatedCart);
     };
+    /**
+     * Calculates the cart subtotal from each item's price and quantity.
+     *
+     * @returns {number} Cart subtotal.
+     */
     const getSubtotal = () => {
         return cartItems.reduce((total, item) => {
             return total + Number(item.price) * Number(item.quantity);
         }, 0);
     };
 
+    /**
+     * Submits the cart as an in-progress order and clears order-related cache.
+     *
+     * @returns {Promise<void>} Resolves after submission succeeds or an error alert is shown.
+     */
     const submitOrder = async () => {
         if (!tableRef || !tableId) {
             Alert.alert(

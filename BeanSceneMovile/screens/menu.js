@@ -11,6 +11,14 @@ import SelectedTableHeader from '../components/selectedTableheader.js';
 
 const MENU_ENDPOINT = '/api/menu-items';
 const CATEGORIES_ENDPOINT = '/api/categories';
+
+/**
+ * Shows the customer-facing menu with category filtering and item search.
+ *
+ * @param {object} props Screen props.
+ * @param {object} props.navigation React Navigation object used to open item details.
+ * @returns {React.ReactElement} Menu browsing screen.
+ */
 export default function MenuScreen({navigation}) {
     const [menuItems, setMenuItems] = useState([]);
     const [categories, setCategories] = useState([{ id: 'all', name: 'Entrees'}]);
@@ -27,6 +35,11 @@ export default function MenuScreen({navigation}) {
     );
 
     
+    /**
+     * Fetches menu items and active categories from the backend and stores them for browsing.
+     *
+     * @returns {Promise<void>} Resolves after menu data has loaded or an error is shown.
+     */
     async function loadMenuData() {
         try {
             setLoading(true);
@@ -89,6 +102,12 @@ export default function MenuScreen({navigation}) {
         });
     }, [categories, menuItems, selectedCategoryId]);
 
+    /**
+     * Converts a menu item's stored image value into a URI React Native can render.
+     *
+     * @param {object} item Menu item returned by the API.
+     * @returns {?string} Renderable image URI or null when the item has no image.
+     */
     function getImageUrl(item) {
         const image = item.photoUrl || item.imageUrl || item.photo || item.image;
         if (!image) return null;
@@ -97,6 +116,12 @@ export default function MenuScreen({navigation}) {
         }
         return `${API_BASE_URL}${image}`;
     }
+    /**
+     * Normalises dietary flag data from the backend into a simple array for badges.
+     *
+     * @param {object} item Menu item that may contain dietary flags.
+     * @returns {string[]} Dietary flag values.
+     */
     function getDietaryFlags(item) {
         const flags = item.dietaryFlags || item.dietary || [];
         if (Array.isArray(flags)) {
@@ -114,6 +139,12 @@ export default function MenuScreen({navigation}) {
         }
         return [];
     }
+    /**
+     * Converts a dietary flag value into the compact text shown in the badge.
+     *
+     * @param {string} flag Raw dietary flag value.
+     * @returns {string} Short badge label.
+     */
     function formatFlag(flag) {
         const lowerFlag = String(flag).toLowerCase();
         if (lowerFlag.includes('vegetarian')) return 'V';
@@ -123,9 +154,21 @@ export default function MenuScreen({navigation}) {
 
         return String(flag).substring(0, 2).toUpperCase();
     }
+    /**
+     * Navigates to the details screen for a selected menu item.
+     *
+     * @param {object} item Selected menu item.
+     * @returns {void}
+     */
     function openItemDetails(item) {
         navigation.navigate('ItemDetails', { item});
     }
+    /**
+     * Renders a selectable category chip.
+     *
+     * @param {object} category Category record.
+     * @returns {React.ReactElement} Category chip.
+     */
     function renderCategory(category) {
         const categoryId = category.id || category._id;
         const isSelected = String(selectedCategoryId) === String(categoryId);
@@ -143,6 +186,13 @@ export default function MenuScreen({navigation}) {
             </TouchableOpacity>
         );
     }
+    /**
+     * Renders a menu item card for the FlatList.
+     *
+     * @param {object} params FlatList render params.
+     * @param {object} params.item Menu item to display.
+     * @returns {React.ReactElement} Menu item card.
+     */
     function renderMenuItem({ item }) {
         const imageUrl = getImageUrl(item);
         const flags = getDietaryFlags(item);

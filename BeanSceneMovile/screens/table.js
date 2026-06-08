@@ -38,6 +38,13 @@ const fallbackTables = [
     })),
 ];
 
+/**
+ * Lets staff select an available table and marks occupied tables from active orders.
+ *
+ * @param {object} props Screen props.
+ * @param {object} props.navigation React Navigation object.
+ * @returns {React.ReactElement} Table selection screen.
+ */
 export default function TableScreen({ navigation }) {
     const [tables, setTables] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -50,6 +57,11 @@ export default function TableScreen({ navigation }) {
         }, [])
     );
 
+    /**
+     * Loads tables and order data, falling back to cached data when the backend is offline.
+     *
+     * @returns {Promise<void>} Resolves after table state has been refreshed.
+     */
     const loadTables = async () => {
         try {
             setLoading(true);
@@ -116,10 +128,23 @@ export default function TableScreen({ navigation }) {
         }
     };
 
+    /**
+     * Resolves a stable table identifier from the possible backend field names.
+     *
+     * @param {object} table Table record.
+     * @returns {string|number} Table identifier.
+     */
     function getTableId(table) {
         return table.id || table._id || table.tableId || table.tableRef;
     }
 
+    /**
+     * Checks whether a table currently has an in-progress order.
+     *
+     * @param {object} table Table record.
+     * @param {object[]} orders Order records.
+     * @returns {boolean} True when the table should be shown as occupied.
+     */
     function hasInProgressOrder(table, orders) {
         const tableId = getTableId(table);
 
@@ -136,6 +161,13 @@ export default function TableScreen({ navigation }) {
         });
     }
 
+    /**
+     * Applies active order state to tables so occupied tables cannot be selected.
+     *
+     * @param {object[]} tableData Table records.
+     * @param {object[]} orderData Order records.
+     * @returns {object[]} Tables with occupied status applied.
+     */
     function applyOrderStatuses(tableData, orderData) {
         const tableList = Array.isArray(tableData) ? tableData : [];
         const orderList = Array.isArray(orderData) ? orderData : [];
@@ -152,6 +184,12 @@ export default function TableScreen({ navigation }) {
         });
     }
 
+    /**
+     * Clears the selected table if a newly loaded order has made it occupied.
+     *
+     * @param {object[]} tableList Latest table records.
+     * @returns {Promise<void>} Resolves after local selected table storage is checked.
+     */
     async function clearSelectedTableIfOccupied(tableList) {
         const savedTable = await AsyncStorage.getItem('selectedTable');
 
@@ -177,6 +215,12 @@ export default function TableScreen({ navigation }) {
         Outside: tables.filter(table => table.area === 'Outside'),
         Balcony: tables.filter(table => table.area === 'Balcony'),
     };
+    /**
+     * Selects or deselects an available table and stores the selection locally.
+     *
+     * @param {object} table Table selected by the user.
+     * @returns {Promise<void>} Resolves after selected table storage is updated.
+     */
     const handleTablePress = async (table) => {
         if (table.status === 'occupied') {
             Alert.alert('Table Occupied', 'This table is currently occupied. Please select another table.');
@@ -199,6 +243,12 @@ export default function TableScreen({ navigation }) {
             tableId,
         }));
     };
+    /**
+     * Renders one table button with status and selected styling.
+     *
+     * @param {object} table Table record.
+     * @returns {React.ReactElement} Table selection button.
+     */
     const renderTableButton = (table) => {
         const tableId = getTableId(table);
         const isSelected = selectedTableId === tableId;
@@ -230,6 +280,13 @@ export default function TableScreen({ navigation }) {
         );
     };
 
+    /**
+     * Renders one restaurant area section and its table grid.
+     *
+     * @param {string} title Area title shown above the grid.
+     * @param {string} areaKey Area key used to read grouped tables.
+     * @returns {React.ReactElement} Area table section.
+     */
     const renderArea = (title, areaKey) => {
         return (
             <View style={styles.areaCard}>

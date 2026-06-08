@@ -17,6 +17,14 @@ import { apiFetch } from '../../components/apiFetch.js';
 
 const STAFF_ENDPOINT = '/api/staff';
 
+/**
+ * Creates or edits a staff account from the manager workflow.
+ *
+ * @param {object} props Screen props.
+ * @param {object} props.navigation React Navigation object.
+ * @param {object} props.route Route params containing an optional staff record.
+ * @returns {React.ReactElement} Staff add/edit form.
+ */
 export default function AddEditStaffScreen({ navigation, route }) {
     const editingStaff = route.params?.staff || null;
     const isEditing = !!editingStaff;
@@ -37,6 +45,12 @@ export default function AddEditStaffScreen({ navigation, route }) {
 
     const headerTitle = isEditing ? getDisplayName(editingStaff) : 'Add Staff Member';
     
+    /**
+     * Resolves the staff member name used in the edit header.
+     *
+     * @param {object} staff Staff record.
+     * @returns {string} Display name.
+     */
     function getDisplayName(staff) {
         return (
             staff?.fullName ||
@@ -44,6 +58,11 @@ export default function AddEditStaffScreen({ navigation, route }) {
             'Edit Staff Member'
         );
     }
+    /**
+     * Splits the full-name input into first and last names for the backend payload.
+     *
+     * @returns {{firstName: string, lastName: string}} Parsed first and last names.
+     */
     function splitFullName() {
         const parts = fullName.trim().split(' ');
         const firstName = parts[0] || '';
@@ -52,6 +71,11 @@ export default function AddEditStaffScreen({ navigation, route }) {
         return { firstName, lastName };
     }
 
+    /**
+     * Validates the staff form and creates or updates the staff account.
+     *
+     * @returns {Promise<void>} Resolves after the save attempt completes.
+     */
     async function handleSave() {
         const { firstName, lastName } = splitFullName();
 

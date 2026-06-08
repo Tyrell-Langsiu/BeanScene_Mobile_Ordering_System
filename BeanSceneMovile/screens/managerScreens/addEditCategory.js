@@ -17,6 +17,14 @@ import { apiFetch } from '../../components/apiFetch.js';
 
 const CATEGORIES_ENDPOINT = '/api/categories';
 
+/**
+ * Creates or edits a menu category used for browsing and manager filtering.
+ *
+ * @param {object} props Screen props.
+ * @param {object} props.navigation React Navigation object.
+ * @param {object} props.route Route params containing an optional category record.
+ * @returns {React.ReactElement} Category add/edit form.
+ */
 export default function AddEditCategoryScreen({ navigation, route }) {
     const editingCategory = route.params?.category || null;
     const isEditing = !!editingCategory;
@@ -34,10 +42,21 @@ export default function AddEditCategoryScreen({ navigation, route }) {
 
     const headerTitle = isEditing ? 'Edit Category' : 'Add Category';
 
+    /**
+     * Resolves a category ID from possible backend field names.
+     *
+     * @param {object} category Category record.
+     * @returns {string|number|undefined} Category identifier.
+     */
     function getCategoryId(category) {
         return category?.id || category?._id;
     }
 
+    /**
+     * Validates the category form before saving.
+     *
+     * @returns {boolean} True when the form can be submitted.
+     */
     function validateForm() {
         if (!name.trim()) {
             Alert.alert('Validation Error', 'Category name is required.');
@@ -52,6 +71,11 @@ export default function AddEditCategoryScreen({ navigation, route }) {
         return true;
     }
 
+    /**
+     * Creates or updates a category and returns to menu management.
+     *
+     * @returns {Promise<void>} Resolves after the save attempt completes.
+     */
     async function handleSave() {
         if (!validateForm()) return;
 

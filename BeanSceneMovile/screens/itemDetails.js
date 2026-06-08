@@ -11,6 +11,16 @@ import SelectedTableHeader from '../components/selectedTableheader.js';
 import { API_BASE_URL } from '../components/apiFetch.js';
 import { CACHE_KEYS, getCache, setCache } from '../components/cache.js';
 
+/**
+ * Displays a selected menu item and lets staff add it to the current cart.
+ *
+ * @param {object} props Screen props.
+ * @param {object} props.route Route params containing the selected menu item.
+ * @param {object} props.navigation React Navigation object.
+ * @param {boolean} [props.showBack=false] Optional legacy flag for showing back navigation.
+ * @param {Function} [props.onBack] Optional legacy back handler.
+ * @returns {React.ReactElement} Item details screen.
+ */
 export default function ItemDetailsScreen({ route, navigation, showBack = false, onBack,}) {
     const {item} = route.params;
 
@@ -29,6 +39,11 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
         loadCachedItemDetails();
     }, []);
 
+    /**
+     * Loads cached details for the selected item and refreshes the cache with current route data.
+     *
+     * @returns {Promise<void>} Resolves after cache lookup and update complete.
+     */
     async function loadCachedItemDetails() {
         const itemId = item.id || item._id;
 
@@ -47,6 +62,11 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
         await setCache(cacheKey, item);
     }
 
+    /**
+     * Builds a renderable image URI from the selected item image fields.
+     *
+     * @returns {?string} Renderable image URI or null when no image exists.
+     */
     function getImageUrl() {
         const image = displayItem.photoUrl || displayItem.imageUrl || displayItem.photo || displayItem.image;
 
@@ -56,6 +76,11 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
         }
         return `${API_BASE_URL}${image}`;
     }
+    /**
+     * Normalises dietary flags from the selected item for badge rendering.
+     *
+     * @returns {string[]} Dietary flag values.
+     */
     function getDietaryFlags() {
         const flags = displayItem.dietaryFlags || displayItem.dietary || [];
 
@@ -75,6 +100,12 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
 
         return [];
     }
+    /**
+     * Converts a dietary flag into the compact text used by the details badge.
+     *
+     * @param {string} flag Raw dietary flag value.
+     * @returns {string} Short badge label.
+     */
     function formatFlag(flag) {
         const lowerFlag = String(flag).toLowerCase();
 
@@ -85,14 +116,29 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
 
         return String(flag).substring(0, 2).toUpperCase();
     }
+    /**
+     * Decreases the quantity selector without allowing values below one.
+     *
+     * @returns {void}
+     */
     function decreaseQuantity() {
         if (quantity > 1) {
             setQuantity(quantity - 1);
         }
     }
+    /**
+     * Increases the quantity selector by one.
+     *
+     * @returns {void}
+     */
     function increaseQuantity() {
         setQuantity(quantity + 1);
     }
+    /**
+     * Adds the configured item, quantity, and notes to the cached cart.
+     *
+     * @returns {Promise<void>} Resolves after the cart is saved.
+     */
     async function addToCart() {
         try {
             const cart = await getCache(CACHE_KEYS.cart, []);

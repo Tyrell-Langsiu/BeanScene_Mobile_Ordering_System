@@ -17,6 +17,13 @@ import { sortWithDataStructures } from '../../components/sort';
 
 const STAFF_ENDPOINT = '/api/staff';
 
+/**
+ * Lists staff accounts and provides manager actions for add, edit, delete, and sort.
+ *
+ * @param {object} props Screen props.
+ * @param {object} props.navigation React Navigation object.
+ * @returns {React.ReactElement} Staff management screen.
+ */
 export default function StaffMemberScreen({ navigation }) {
     const [staffMembers, setStaffMembers] = useState([]);
     const [sortBy, setSortBy] = useState('sortName');
@@ -30,6 +37,11 @@ export default function StaffMemberScreen({ navigation }) {
         loadStaffMembers();
     }, []);
 
+    /**
+     * Loads staff and manager accounts from the backend for management.
+     *
+     * @returns {Promise<void>} Resolves after staff state has been refreshed.
+     */
     async function loadStaffMembers() {
         try {
             setLoading(true);
@@ -50,6 +62,12 @@ export default function StaffMemberScreen({ navigation }) {
             setLoading(false);
         }
     }
+    /**
+     * Resolves a staff member's display name from possible backend fields.
+     *
+     * @param {object} user Staff account record.
+     * @returns {string} Display name.
+     */
     function getName(user) {
         return (
             user.fullName ||
@@ -58,6 +76,12 @@ export default function StaffMemberScreen({ navigation }) {
             'Staff Member'
         );
     }
+    /**
+     * Builds avatar initials from a staff member's display name.
+     *
+     * @param {object} user Staff account record.
+     * @returns {string} Initials for the avatar.
+     */
     function getInitials(user) {
         const name = getName(user);
         const parts = name.trim().split(' ');
@@ -68,15 +92,33 @@ export default function StaffMemberScreen({ navigation }) {
 
         return name.substring(0, 2).toUpperCase();
     }
+    /**
+     * Resolves the staff member's role label.
+     *
+     * @param {object} user Staff account record.
+     * @returns {string} Role label.
+     */
     function getRole(user) {
         return user.role || 'Staff';
     }
+    /**
+     * Resolves the active/inactive status from backend status fields.
+     *
+     * @param {object} user Staff account record.
+     * @returns {string} Status label.
+     */
     function getStatus(user) {
         if (user.status) return user.status;
         if (user.active === false) return 'Inactive';
         if (user.isActive === false) return 'Inactive';
         return 'Active';
     }
+    /**
+     * Adds normalized fields used by the custom data-structure sorter.
+     *
+     * @param {object} user Staff account record.
+     * @returns {object} Staff account with sort helper fields.
+     */
     function addStaffSortFields(user) {
         return {
             ...user,
@@ -92,6 +134,12 @@ export default function StaffMemberScreen({ navigation }) {
         { label: 'Status', value: 'sortStatus' },
     ];
 
+    /**
+     * Changes the staff sort field or toggles direction for the active field.
+     *
+     * @param {string} value Sort field key.
+     * @returns {void}
+     */
     function chooseSort(value) {
         if (sortBy === value) {
             setSortDirection(current => current === 'asc' ? 'desc' : 'asc');
@@ -101,12 +149,29 @@ export default function StaffMemberScreen({ navigation }) {
         setSortBy(value);
         setSortDirection('asc');
     }
+    /**
+     * Opens the add-staff form.
+     *
+     * @returns {void}
+     */
     function goToAddStaff() {
        navigation.navigate('AddStaff');
     }
+    /**
+     * Opens the edit-staff form for the selected account.
+     *
+     * @param {object} user Staff account record.
+     * @returns {void}
+     */
     function goToEditStaff(user) {
         navigation.navigate('EditStaff', { staff: user });
     }
+    /**
+     * Confirms and deletes a staff account from the backend.
+     *
+     * @param {object} user Staff account record.
+     * @returns {Promise<void>} Resolves after the confirmation flow is created.
+     */
     async function deleteStaff(user) {
         Alert.alert(
             'Delete Staff Member',
@@ -139,6 +204,13 @@ export default function StaffMemberScreen({ navigation }) {
             ]
         );
     }
+    /**
+     * Renders a role or status badge with matching colour treatment.
+     *
+     * @param {string} text Badge text.
+     * @param {'role'|'status'} type Badge type.
+     * @returns {React.ReactElement} Badge component.
+     */
     function renderBadge(text, type) {
         const isManager = text === 'Manager';
         const isActive = text === 'Active';
@@ -163,6 +235,12 @@ export default function StaffMemberScreen({ navigation }) {
             </View>
         );
     }
+    /**
+     * Renders one staff member card for phone layouts.
+     *
+     * @param {object} user Staff account record.
+     * @returns {React.ReactElement} Staff card.
+     */
     function renderMobileCard(user) {
         const name = getName(user);
         const role = getRole(user);
@@ -198,6 +276,11 @@ export default function StaffMemberScreen({ navigation }) {
         );
     }
     
+    /**
+     * Renders the staff table used on tablet layouts.
+     *
+     * @returns {React.ReactElement} Staff table.
+     */
     function renderTabletTable() {
         return (
             <View style={styles.table}>

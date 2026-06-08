@@ -15,6 +15,13 @@ import { apiFetch } from '../components/apiFetch.js';
 
 const LOGIN_ENDPOINT = '/api/auth/login'
 
+/**
+ * Renders the staff login form and stores the authenticated user session.
+ *
+ * @param {object} props Screen props.
+ * @param {(user: object) => void} props.onLoginSuccess Called after a successful login.
+ * @returns {React.ReactElement} Login screen UI.
+ */
 export default function LoginScreen({ onLoginSuccess }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -22,6 +29,11 @@ export default function LoginScreen({ onLoginSuccess }) {
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
 
+    /**
+     * Validates credentials, clears stale auth state, and stores the returned staff session.
+     *
+     * @returns {Promise<void>} Resolves after login succeeds or an error message is shown.
+     */
     async function handleLogin() {
         try {
             setLoading(true);

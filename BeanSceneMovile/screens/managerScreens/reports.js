@@ -17,6 +17,13 @@ import { apiFetch } from '../../components/apiFetch.js';
 const REPORTS_ENDPOINT = '/api/reports';
 const ORDERS_SUMMARY_ENDPOINT = `${REPORTS_ENDPOINT}/orders-summary`;
 
+/**
+ * Displays order activity summary metrics for managers.
+ *
+ * @param {object} props Screen props.
+ * @param {object} props.navigation React Navigation object.
+ * @returns {React.ReactElement} Reports screen.
+ */
 export default function ReportsScreen({ navigation }) {
     const [reports, setReports] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -28,6 +35,11 @@ export default function ReportsScreen({ navigation }) {
         loadReports();
     }, []);
 
+    /**
+     * Loads order summary report data from the backend.
+     *
+     * @returns {Promise<void>} Resolves after report state has been refreshed.
+     */
     async function loadReports() {
         try {
             setLoading(true);
@@ -47,9 +59,20 @@ export default function ReportsScreen({ navigation }) {
             setLoading(false);
         }
     }
+    /**
+     * Formats a numeric value as currency for report cards.
+     *
+     * @param {number|string} value Revenue value.
+     * @returns {string} Formatted currency.
+     */
     function formatMoney(value) {
         return `$${Number(value || 0).toFixed(2)}`;
     }
+    /**
+     * Renders the reports header with back navigation.
+     *
+     * @returns {React.ReactElement} Header component.
+     */
     function renderHeader() {
         return (
             <View style={sharedStyles.header}>
@@ -65,6 +88,15 @@ export default function ReportsScreen({ navigation }) {
             </View>
         );
     }
+    /**
+     * Renders one report metric card.
+     *
+     * @param {string} icon Ionicons icon name.
+     * @param {string} title Metric title.
+     * @param {string|number} value Metric value.
+     * @param {string} note Supporting metric note.
+     * @returns {React.ReactElement} Summary card.
+     */
     function renderSummaryCard(icon, title, value, note) {
         return (
             <View style={styles.summaryCard}>
@@ -78,6 +110,11 @@ export default function ReportsScreen({ navigation }) {
             </View>
         );
     }
+    /**
+     * Renders the grid of top-level order summary metrics.
+     *
+     * @returns {?React.ReactElement} Summary cards or null before data loads.
+     */
     function renderSummaryCards() {
         if (!reports) return null;
 
@@ -110,6 +147,11 @@ export default function ReportsScreen({ navigation }) {
             </View>
         );
     }
+    /**
+     * Renders the in-progress versus completed order breakdown panel.
+     *
+     * @returns {?React.ReactElement} Status panel or null before data loads.
+     */
     function renderStatusBreakdown() {
         if (!reports) return null;
 
@@ -147,6 +189,11 @@ export default function ReportsScreen({ navigation }) {
             </View>
         );
     }
+    /**
+     * Renders the revenue summary panel.
+     *
+     * @returns {?React.ReactElement} Revenue panel or null before data loads.
+     */
     function renderRevenuePanel() {
         if (!reports) return null;
 

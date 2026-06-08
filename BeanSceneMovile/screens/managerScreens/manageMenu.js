@@ -22,6 +22,13 @@ import { apiFetch, API_BASE_URL } from '../../components/apiFetch.js';
 const MENU_ENDPOINT = '/api/menu-items';
 const CATEGORIES_ENDPOINT = '/api/categories';
 
+/**
+ * Provides manager controls for viewing, filtering, editing, and deleting menu data.
+ *
+ * @param {object} props Screen props.
+ * @param {object} props.navigation React Navigation object.
+ * @returns {React.ReactElement} Menu management screen.
+ */
 export default function ManageMenuScreen({navigation}) {
     const [menuItems, setMenuItems] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -40,6 +47,11 @@ export default function ManageMenuScreen({navigation}) {
         }, [])
     );
 
+    /**
+     * Loads menu items and categories for the manager view.
+     *
+     * @returns {Promise<void>} Resolves after menu management data has loaded.
+     */
     async function loadData() {
         try {
             setLoading(true);
@@ -65,14 +77,32 @@ export default function ManageMenuScreen({navigation}) {
         }
     }
 
+    /**
+     * Resolves a menu item ID from possible backend field names.
+     *
+     * @param {object} item Menu item record.
+     * @returns {string|number} Menu item identifier.
+     */
     function getItemId(item) {
         return item.id || item._id || item.itemId || item.menuItemId;
     }
 
+    /**
+     * Resolves the display name for a menu item.
+     *
+     * @param {object} item Menu item record.
+     * @returns {string} Menu item display name.
+     */
     function getItemName(item) {
         return item.name || item.itemName || 'Menu Item';
     }
 
+    /**
+     * Builds a renderable image URI from menu item image fields.
+     *
+     * @param {object} item Menu item record.
+     * @returns {?string} Renderable image URI or null.
+     */
     function getImageUrl(item) {
         const image = item.photoUrl || item.imageUrl || item.photo || item.image;
 
@@ -87,6 +117,12 @@ export default function ManageMenuScreen({navigation}) {
         return `${API_BASE_URL}${imageString}`;
     }
 
+    /**
+     * Resolves a menu item's category name from ID, embedded category, or category name fields.
+     *
+     * @param {object} item Menu item record.
+     * @returns {string} Category display name.
+     */
     function getItemCategory(item) {
         if (typeof item.category === 'string') return item.category;
         if (item.category?.name) return item.category.name;
@@ -103,17 +139,35 @@ export default function ManageMenuScreen({navigation}) {
         return 'Uncategorised';
     }
 
+    /**
+     * Formats a menu item price for display.
+     *
+     * @param {object} item Menu item record.
+     * @returns {string} Formatted price.
+     */
     function getPrice(item) {
         const price = item.price || 0;
         return `$${Number(price).toFixed(2)}`;
     }
 
+    /**
+     * Resolves whether a menu item is available.
+     *
+     * @param {object} item Menu item record.
+     * @returns {boolean} Availability state.
+     */
     function getAvailable(item) {
         if (item.available !== undefined) return item.available;
         if (item.isAvailable !== undefined) return item.isAvailable;
         return true;
     }
 
+    /**
+     * Normalises dietary flag data into badge labels.
+     *
+     * @param {object} item Menu item record.
+     * @returns {string[]} Dietary flag labels.
+     */
     function getDietaryFlags(item) {
         if (Array.isArray(item.dietaryFlags)) return item.dietaryFlags;
         if (typeof item.dietaryFlags === 'object' && item.dietaryFlags !== null) {
@@ -130,6 +184,11 @@ export default function ManageMenuScreen({navigation}) {
         return [];
     }
 
+    /**
+     * Filters menu items by search text and selected category.
+     *
+     * @returns {object[]} Visible menu items.
+     */
     function filteredItems() {
         return menuItems.filter(item => {
             const name = getItemName(item).toLowerCase();
@@ -145,32 +204,77 @@ export default function ManageMenuScreen({navigation}) {
 
         });
     }
+    /**
+     * Opens the add-menu-item form.
+     *
+     * @returns {void}
+     */
     function goToAddItem() {
         navigation.navigate('AddMenu');
     }
+    /**
+     * Opens the edit-menu-item form.
+     *
+     * @param {object} item Menu item to edit.
+     * @returns {void}
+     */
     function goToEditItem(item) {
         navigation.navigate('EditMenu', { item });
     }
+    /**
+     * Opens the add-category form.
+     *
+     * @returns {void}
+     */
     function goToAddCategory() {
         navigation.navigate('AddCategory');
     }
+    /**
+     * Resolves a category display name.
+     *
+     * @param {object} category Category record.
+     * @returns {string} Category name.
+     */
     function getCategoryName(category) {
         return category?.name || category?.categoryName || 'Category';
     }
+    /**
+     * Resolves a category ID from possible backend field names.
+     *
+     * @param {object} category Category record.
+     * @returns {string|number|undefined} Category identifier.
+     */
     function getCategoryId(category) {
         return category?.id || category?._id;
     }
+    /**
+     * Finds the currently selected category record.
+     *
+     * @returns {?object} Selected category or null for All.
+     */
     function getSelectedCategory() {
         if (selectedCategory === 'All') return null;
 
         return categories.find(category => getCategoryName(category) === selectedCategory);
     }
+    /**
+     * Builds the list of category names used by the category filter controls.
+     *
+     * @returns {string[]} Category filter labels.
+     */
     function getCategoryNames() {
         return [
             'All',
             ...categories.map(category => getCategoryName(category)).filter(Boolean),
         ];
     }
+    /**
+     * Checks whether a menu item belongs to a specific category before cascading delete.
+     *
+     * @param {object} item Menu item record.
+     * @param {object} category Category record.
+     * @returns {boolean} True when the item belongs to the category.
+     */
     function itemBelongsToCategory(item, category) {
         const categoryId = getCategoryId(category);
         const categoryName = getCategoryName(category).toLowerCase();
@@ -185,6 +289,11 @@ export default function ManageMenuScreen({navigation}) {
 
         return getItemCategory(item).toLowerCase() === categoryName;
     }
+    /**
+     * Opens the selected category in the edit-category form.
+     *
+     * @returns {void}
+     */
     function goToEditCategory() {
         const category = getSelectedCategory();
 
@@ -195,6 +304,12 @@ export default function ManageMenuScreen({navigation}) {
 
         navigation.navigate('EditCategory', { category });
     }
+    /**
+     * Deletes a category and all menu items assigned to it.
+     *
+     * @param {object} category Category record to delete.
+     * @returns {Promise<void>} Resolves after backend deletes and local state updates.
+     */
     async function performDeleteCategory(category) {
         const categoryId = getCategoryId(category);
         const itemsToDelete = menuItems.filter(item => itemBelongsToCategory(item, category));
@@ -243,6 +358,11 @@ export default function ManageMenuScreen({navigation}) {
             Alert.alert('Error', err.message);
         }
     }
+    /**
+     * Confirms category deletion and warns about menu items that will also be deleted.
+     *
+     * @returns {void}
+     */
     function deleteCategory() {
         const category = getSelectedCategory();
 
@@ -281,6 +401,12 @@ export default function ManageMenuScreen({navigation}) {
         );
     }
 
+    /**
+     * Deletes a single menu item from the backend and removes it from local state.
+     *
+     * @param {object} item Menu item to delete.
+     * @returns {Promise<void>} Resolves after deletion completes.
+     */
     async function performDeleteItem(item) {
         const id = getItemId(item);
 
@@ -310,6 +436,12 @@ export default function ManageMenuScreen({navigation}) {
         }
     }
 
+    /**
+     * Confirms deletion of a single menu item.
+     *
+     * @param {object} item Menu item to delete.
+     * @returns {void}
+     */
     function deleteItem(item) {
         const message = `Are you sure you want to delete ${getItemName(item)}?`;
 
@@ -336,6 +468,12 @@ export default function ManageMenuScreen({navigation}) {
             ]
         );
     }
+    /**
+     * Toggles a menu item's availability and persists the change to the backend.
+     *
+     * @param {object} item Menu item to update.
+     * @returns {Promise<void>} Resolves after availability is saved.
+     */
     async function toggleAvailability(item) {
         try {
             const id = getItemId(item);
@@ -365,6 +503,13 @@ export default function ManageMenuScreen({navigation}) {
 
         }
     }
+    /**
+     * Renders one dietary flag badge.
+     *
+     * @param {string} flag Dietary flag value.
+     * @param {number} index Badge index for a stable key.
+     * @returns {React.ReactElement} Flag badge.
+     */
     function renderFlag(flag, index) {
         const text = String(flag).toUpperCase();
 
@@ -380,6 +525,12 @@ export default function ManageMenuScreen({navigation}) {
                 </View>
         );
     }
+    /**
+     * Renders the availability status badge for a menu item.
+     *
+     * @param {object} item Menu item record.
+     * @returns {React.ReactElement} Status badge.
+     */
     function renderStatus(item) {
         const available = getAvailable(item);
 
@@ -392,6 +543,11 @@ export default function ManageMenuScreen({navigation}) {
         );
     }
 
+    /**
+     * Renders phone category controls, including add, edit, delete, and scrollable filters.
+     *
+     * @returns {React.ReactElement} Mobile category controls.
+     */
     function renderCategoryButtons() {
         const categoryNames = getCategoryNames();
 
@@ -444,6 +600,11 @@ export default function ManageMenuScreen({navigation}) {
         );
         
     }
+    /**
+     * Renders the tablet category dropdown panel when it is open.
+     *
+     * @returns {?React.ReactElement} Tablet category panel or null when closed.
+     */
     function renderTabletCategoryPanel() {
         if (!isTablet || !tabletCategoriesOpen) return null;
 
@@ -472,6 +633,12 @@ export default function ManageMenuScreen({navigation}) {
             </View>
         );
     }
+    /**
+     * Renders one menu item card for phone layouts.
+     *
+     * @param {object} item Menu item record.
+     * @returns {React.ReactElement} Mobile menu item card.
+     */
     function renderMobileCard(item) {
         const available = getAvailable(item);
         const flags = getDietaryFlags(item);
@@ -518,6 +685,11 @@ export default function ManageMenuScreen({navigation}) {
         </View>
         );
     }
+    /**
+     * Renders the menu management table for tablet layouts.
+     *
+     * @returns {React.ReactElement} Tablet menu table.
+     */
     function renderTabletTable() {
         return (
             <View style={styles.table}>

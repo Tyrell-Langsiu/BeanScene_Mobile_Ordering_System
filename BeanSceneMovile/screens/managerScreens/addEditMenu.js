@@ -22,6 +22,14 @@ import { apiFetch, API_BASE_URL } from '../../components/apiFetch.js';
 const MENU_ENDPOINT = '/api/menu-items';
 const CATEGORIES_ENDPOINT = '/api/categories';
 
+/**
+ * Creates or edits a menu item, including category, dietary flags, availability, and photo data.
+ *
+ * @param {object} props Screen props.
+ * @param {object} props.navigation React Navigation object.
+ * @param {object} props.route Route params containing an optional menu item.
+ * @returns {React.ReactElement} Menu item add/edit form.
+ */
 export default function AddEditMenuScreen({ navigation, route }) {
     const editingItem = route.params?.item || null;
     const isEditing = !!editingItem;
@@ -58,6 +66,12 @@ export default function AddEditMenuScreen({ navigation, route }) {
         loadCategories();
     }, []);
 
+    /**
+     * Determines the starting category value when editing an existing menu item.
+     *
+     * @param {?object} item Existing menu item.
+     * @returns {string} Category ID or label.
+     */
     function getStartingCategory(item) {
         if (!item) return 'Entrees';
 
@@ -68,6 +82,12 @@ export default function AddEditMenuScreen({ navigation, route }) {
 
         return 'Entrees';
     }
+    /**
+     * Converts stored image fields into a renderable URI for the preview.
+     *
+     * @param {?object} item Existing menu item.
+     * @returns {string} Renderable image URI or an empty string.
+     */
     function getImageUrl(item) {
         if (!item) return '';
 
@@ -83,6 +103,12 @@ export default function AddEditMenuScreen({ navigation, route }) {
 
         return `${API_BASE_URL}${imageString}`;
     }
+    /**
+     * Converts dietary flag input into the short flag codes used by the UI.
+     *
+     * @param {string|string[]|object} flags Dietary flags from state or backend.
+     * @returns {string[]} Normalized flag codes.
+     */
     function normalizeDietaryFlags(flags) {
         const flagMap = {
             vegetarian: 'V',
@@ -105,12 +131,29 @@ export default function AddEditMenuScreen({ navigation, route }) {
 
         return [];
     }
+    /**
+     * Resolves a category ID from backend category fields.
+     *
+     * @param {object} cat Category record.
+     * @returns {string|number|undefined} Category identifier.
+     */
     function getCategoryId(cat) {
         return cat?.id || cat?._id;
     }
+    /**
+     * Resolves the category label displayed to the manager.
+     *
+     * @param {object} cat Category record.
+     * @returns {string|number|undefined} Category label.
+     */
     function getCategoryLabel(cat) {
         return cat?.name || cat?.categoryName || getCategoryId(cat);
     }
+    /**
+     * Finds the category record matching the current category state.
+     *
+     * @returns {?object} Selected category record.
+     */
     function getSelectedCategory() {
         return categories.find(cat => {
             const id = getCategoryId(cat);
@@ -119,6 +162,12 @@ export default function AddEditMenuScreen({ navigation, route }) {
             return id === category || label === category;
         });
     }
+    /**
+     * Converts selected dietary flags into the backend object format.
+     *
+     * @param {string[]|object|string} flags Current dietary flag state.
+     * @returns {{vegetarian: boolean, vegan: boolean, glutenFree: boolean}} Backend dietary flags.
+     */
     function buildDietaryFlagsObject(flags) {
         const normalizedFlags = normalizeDietaryFlags(flags);
 
@@ -128,6 +177,11 @@ export default function AddEditMenuScreen({ navigation, route }) {
             glutenFree: normalizedFlags.includes('GF') || normalizedFlags.includes('glutenFree'),
         };
     }
+    /**
+     * Builds a filename for the selected image asset.
+     *
+     * @returns {?string} Image filename or null when no image is selected.
+     */
     function getImageFileName() {
         if (!imageAsset?.uri) {
             return null;
@@ -141,6 +195,12 @@ export default function AddEditMenuScreen({ navigation, route }) {
             `menu-item-${Date.now()}.jpg`
         );
     }
+    /**
+     * Determines the selected image MIME type from asset metadata or file extension.
+     *
+     * @param {string} fileName Selected image filename.
+     * @returns {string} Image MIME type.
+     */
     function getImageMimeType(fileName) {
         const extension = fileName.split('.').pop()?.toLowerCase();
 
@@ -150,6 +210,12 @@ export default function AddEditMenuScreen({ navigation, route }) {
                 ? 'image/webp'
                 : 'image/jpeg');
     }
+    /**
+     * Adds selected image data to the menu item payload in a platform-safe way.
+     *
+     * @param {FormData} formData Menu item form payload.
+     * @returns {Promise<boolean>} True when image data was appended.
+     */
     async function appendImageToFormData(formData) {
         if (!imageAsset?.uri) {
             return false;
@@ -173,6 +239,11 @@ export default function AddEditMenuScreen({ navigation, route }) {
         formData.append('photoUrl', photoUrl);
         return true;
     }
+    /**
+     * Builds the multipart menu item payload expected by the backend.
+     *
+     * @returns {Promise<FormData>} FormData payload for create or update.
+     */
     async function buildMenuFormData() {
         const selectedCategory = getSelectedCategory();
         const selectedCategoryId = getCategoryId(selectedCategory) || category;
@@ -198,6 +269,11 @@ export default function AddEditMenuScreen({ navigation, route }) {
 
         return formData;
     }
+    /**
+     * Loads menu categories for the category selector.
+     *
+     * @returns {Promise<void>} Resolves after category state has been refreshed.
+     */
     async function loadCategories() {
         try {
             const data = await apiFetch(CATEGORIES_ENDPOINT);
@@ -215,9 +291,20 @@ export default function AddEditMenuScreen({ navigation, route }) {
             console.log(err);
         }
     }
+    /**
+     * Resolves a menu item ID from possible backend field names.
+     *
+     * @param {object} item Menu item record.
+     * @returns {string|number|undefined} Menu item identifier.
+     */
     function getItemId(item) {
         return item.id || item._id || item.itemId || item.menuItemId;
     }
+    /**
+     * Builds category labels for the category cycling control.
+     *
+     * @returns {string[]} Category labels.
+     */
     function getCategoryNames() {
         const names = categories
             .map(getCategoryLabel)
@@ -228,6 +315,11 @@ export default function AddEditMenuScreen({ navigation, route }) {
         }
         return names;
     }
+    /**
+     * Cycles the form category to the next available category option.
+     *
+     * @returns {void}
+     */
     function changeCategory() {
         const options = categories.length > 0
             ? categories.map(cat => getCategoryId(cat) || getCategoryLabel(cat)).filter(Boolean)
@@ -239,12 +331,23 @@ export default function AddEditMenuScreen({ navigation, route }) {
         
         setCategory(options[nextIndex]);
     }
+    /**
+     * Resolves the visible text for the current category selection.
+     *
+     * @returns {string} Current category label.
+     */
     function getCategoryDisplayText() {
         const selectedCategory = getSelectedCategory();
 
         return getCategoryLabel(selectedCategory) || category;
     }
 
+    /**
+     * Adds or removes a dietary flag from the selected flag state.
+     *
+     * @param {string} flag Dietary flag code.
+     * @returns {void}
+     */
     function toggleFlag(flag) {
         setDietaryFlags(current => {
             const currentFlags = normalizeDietaryFlags(current);
@@ -256,6 +359,11 @@ export default function AddEditMenuScreen({ navigation, route }) {
             return [...currentFlags, flag];
         });
     }
+    /**
+     * Validates the menu item form before saving.
+     *
+     * @returns {boolean} True when the form can be submitted.
+     */
     function validateForm() {
         if (!name.trim()) {
             Alert.alert('Validation Error', 'Item name is required.');
@@ -276,6 +384,11 @@ export default function AddEditMenuScreen({ navigation, route }) {
 
         return true;
     }
+    /**
+     * Requests media permission and lets the manager choose an item photo.
+     *
+     * @returns {Promise<void>} Resolves after image selection completes or is cancelled.
+     */
     async function pickImage() {
         try {
             const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -304,6 +417,11 @@ export default function AddEditMenuScreen({ navigation, route }) {
             Alert.alert('Error', 'Could not select image.');
         }
     }
+    /**
+     * Creates or updates the menu item and returns to menu management.
+     *
+     * @returns {Promise<void>} Resolves after the save attempt completes.
+     */
     async function handleSave() {
         if (!validateForm()) return;
 
@@ -334,6 +452,13 @@ export default function AddEditMenuScreen({ navigation, route }) {
             setSaving(false);
         }
     }
+    /**
+     * Renders one dietary flag toggle button.
+     *
+     * @param {string} flag Dietary flag code.
+     * @param {string} label Button label.
+     * @returns {React.ReactElement} Dietary flag toggle.
+     */
     function renderFlagCheckBox(flag, label) {
         const selected = normalizeDietaryFlags(dietaryFlags).includes(flag);
 
