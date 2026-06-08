@@ -20,6 +20,7 @@ import StaffMemberScreen from './screens/managerScreens/staff.js';
 import AddEditStaffScreen from './screens/managerScreens/addEditStaff.js';
 import ManageMenuScreen from './screens/managerScreens/manageMenu.js';
 import AddEditMenuScreen from './screens/managerScreens/addEditMenu.js';
+import AddEditCategoryScreen from './screens/managerScreens/addEditCategory.js';
 import ReportsScreen from './screens/managerScreens/reports.js';
 
 const Tab = createBottomTabNavigator();
@@ -46,6 +47,8 @@ function ManagerStackScreen({ onLogout, user }) {
       <ManagerStack.Screen name="ManageMenu" component={ManageMenuScreen} />
       <ManagerStack.Screen name="AddMenu" component={AddEditMenuScreen} />
       <ManagerStack.Screen name="EditMenu" component={AddEditMenuScreen} />
+      <ManagerStack.Screen name="AddCategory" component={AddEditCategoryScreen} />
+      <ManagerStack.Screen name="EditCategory" component={AddEditCategoryScreen} />
       <ManagerStack.Screen name="Reports" component={ReportsScreen} />
     </ManagerStack.Navigator>
   );

@@ -302,23 +302,15 @@ export default function AddEditMenuScreen({ navigation, route }) {
                     body: payload,
                 });
 
-                Alert.alert('Success', 'Menu item updated.', [
-                    {
-                        text: 'OK',
-                        onPress: () => navigation.navigate('ManageMenu'),
-                    },
-                ]);
+                Alert.alert('Success', 'Menu item updated.');
+                navigation.navigate('ManageMenu');
             } else {
                 await apiFetch(MENU_ENDPOINT, {
                     method: 'POST',
                     body: payload,
                 });
-                Alert.alert('Success', 'Menu item created.', [
-                    {
-                        text: 'OK',
-                        onPress: () => navigation.navigate('ManageMenu'),
-                    },
-                ]);
+                Alert.alert('Success', 'Menu item created.');
+                navigation.navigate('ManageMenu');
             }
         } catch (err) {
             console.log(err);

@@ -29,6 +29,7 @@ export default function ManageMenuScreen({navigation}) {
     const [searchText, setSearchText] = useState('');
     const [loading, setLoading] = useState(true);
     const [deletingItemId, setDeletingItemId] = useState(null);
+    const [tabletCategoriesOpen, setTabletCategoriesOpen] = useState(false);
 
     const { width } = useWindowDimensions();
     const isTablet = width >= 700;
@@ -90,6 +91,15 @@ export default function ManageMenuScreen({navigation}) {
         if (typeof item.category === 'string') return item.category;
         if (item.category?.name) return item.category.name;
         if (item.categoryName) return item.categoryName;
+
+        if (item.categoryId) {
+            const category = categories.find(
+                currentCategory => String(getCategoryId(currentCategory)) === String(item.categoryId)
+            );
+
+            if (category) return getCategoryName(category);
+        }
+
         return 'Uncategorised';
     }
 
@@ -140,6 +150,135 @@ export default function ManageMenuScreen({navigation}) {
     }
     function goToEditItem(item) {
         navigation.navigate('EditMenu', { item });
+    }
+    function goToAddCategory() {
+        navigation.navigate('AddCategory');
+    }
+    function getCategoryName(category) {
+        return category?.name || category?.categoryName || 'Category';
+    }
+    function getCategoryId(category) {
+        return category?.id || category?._id;
+    }
+    function getSelectedCategory() {
+        if (selectedCategory === 'All') return null;
+
+        return categories.find(category => getCategoryName(category) === selectedCategory);
+    }
+    function getCategoryNames() {
+        return [
+            'All',
+            ...categories.map(category => getCategoryName(category)).filter(Boolean),
+        ];
+    }
+    function itemBelongsToCategory(item, category) {
+        const categoryId = getCategoryId(category);
+        const categoryName = getCategoryName(category).toLowerCase();
+
+        if (categoryId) {
+            const categoryIdText = String(categoryId);
+
+            if (String(item.categoryId) === categoryIdText) return true;
+            if (String(item.category?._id || item.category?.id) === categoryIdText) return true;
+            if (typeof item.category === 'string' && item.category === categoryIdText) return true;
+        }
+
+        return getItemCategory(item).toLowerCase() === categoryName;
+    }
+    function goToEditCategory() {
+        const category = getSelectedCategory();
+
+        if (!category) {
+            Alert.alert('Select Category', 'Please select a category to edit.');
+            return;
+        }
+
+        navigation.navigate('EditCategory', { category });
+    }
+    async function performDeleteCategory(category) {
+        const categoryId = getCategoryId(category);
+        const itemsToDelete = menuItems.filter(item => itemBelongsToCategory(item, category));
+
+        if (!categoryId) {
+            Alert.alert('Error', 'This category is missing an ID and cannot be deleted.');
+            return;
+        }
+
+        try {
+            await Promise.all(
+                itemsToDelete.map(item => {
+                    const itemId = getItemId(item);
+
+                    if (!itemId) {
+                        throw new Error(`${getItemName(item)} is missing an ID and cannot be deleted.`);
+                    }
+
+                    return apiFetch(`${MENU_ENDPOINT}/${encodeURIComponent(String(itemId))}`, {
+                        method: 'DELETE',
+                    });
+                })
+            );
+
+            await apiFetch(`${CATEGORIES_ENDPOINT}/${encodeURIComponent(String(categoryId))}`, {
+                method: 'DELETE',
+            });
+
+            const deletedItemIds = itemsToDelete.map(item => String(getItemId(item)));
+
+            setMenuItems(current =>
+                current.filter(item => !deletedItemIds.includes(String(getItemId(item))))
+            );
+            setCategories(current =>
+                current.filter(item => String(getCategoryId(item)) !== String(categoryId))
+            );
+            setSelectedCategory('All');
+            Alert.alert(
+                'Success',
+                itemsToDelete.length > 0
+                    ? `Category and ${itemsToDelete.length} menu item${itemsToDelete.length === 1 ? '' : 's'} deleted.`
+                    : 'Category deleted.'
+            );
+        } catch (err) {
+            console.log(err);
+            Alert.alert('Error', err.message);
+        }
+    }
+    function deleteCategory() {
+        const category = getSelectedCategory();
+
+        if (!category) {
+            Alert.alert('Select Category', 'Please select a category to delete.');
+            return;
+        }
+
+        const itemsToDelete = menuItems.filter(item => itemBelongsToCategory(item, category));
+        const itemText = itemsToDelete.length > 0
+            ? ` This will also delete ${itemsToDelete.length} menu item${itemsToDelete.length === 1 ? '' : 's'} in that category.`
+            : '';
+        const message = `Are you sure you want to delete ${getCategoryName(category)}?${itemText}`;
+
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            if (window.confirm(message)) {
+                performDeleteCategory(category);
+            }
+            return;
+        }
+
+        Alert.alert(
+            'Delete Category',
+            message,
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => performDeleteCategory(category),
+                },
+            ]
+        );
     }
 
     async function performDeleteItem(item) {
@@ -254,17 +393,35 @@ export default function ManageMenuScreen({navigation}) {
     }
 
     function renderCategoryButtons() {
-        const categoryNames = [
-            'All',
-            ...categories.map(category => category.name || category.categoryName).filter(Boolean),
-
-        ];
+        const categoryNames = getCategoryNames();
 
         return (
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.categoryRow}>
+            <View style={styles.mobileCategoryControls}>
+                <View style={styles.categoryActionRow}>
+                    <TouchableOpacity
+                        style={styles.categoryIconButton}
+                        onPress={goToAddCategory}
+                        activeOpacity={0.85}>
+                        <Ionicons name="add" size={18} color={colors.white} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.categoryIconButton}
+                        onPress={goToEditCategory}
+                        activeOpacity={0.85}>
+                        <Ionicons name="create-outline" size={17} color={colors.white} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.categoryIconButton, styles.deleteCategoryButton]}
+                        onPress={deleteCategory}
+                        activeOpacity={0.85}>
+                        <Ionicons name="trash-outline" size={17} color={colors.white} />
+                    </TouchableOpacity>
+                </View>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.mobileCategoryScroll}
+                    contentContainerStyle={styles.categoryRow}>
                     {categoryNames.map(category => (
                         <TouchableOpacity
                             key={category}
@@ -283,8 +440,37 @@ export default function ManageMenuScreen({navigation}) {
                             </TouchableOpacity>
                     ))}
                 </ScrollView>
+            </View>
         );
         
+    }
+    function renderTabletCategoryPanel() {
+        if (!isTablet || !tabletCategoriesOpen) return null;
+
+        return (
+            <View style={styles.tabletCategoryPanel}>
+                {getCategoryNames().map(category => (
+                    <TouchableOpacity
+                        key={category}
+                        style={[
+                            styles.categoryButton,
+                            selectedCategory === category && styles.categoryButtonActive,
+                        ]}
+                        onPress={() => {
+                            setSelectedCategory(category);
+                            setTabletCategoriesOpen(false);
+                        }}>
+                        <Text
+                            style={[
+                                styles.categoryButtonText,
+                                selectedCategory === category && styles.categoryButtonTextActive,
+                            ]}>
+                            {category}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+        );
     }
     function renderMobileCard(item) {
         const available = getAvailable(item);
@@ -430,14 +616,40 @@ export default function ManageMenuScreen({navigation}) {
                                 placeholderTextColor="#8AA1A6" />
                         </View>
                         {isTablet ? (
-                            <TouchableOpacity style={styles.tabletCategoryDropdown}>
-                                <Text style={styles.dropdownText}>{selectedCategory} Categories</Text>
-                                <Ionicons name="chevron-down" size={20} color={colors.primary} />
-                            </TouchableOpacity>
+                            <View style={styles.tabletCategoryActions}>
+                                <TouchableOpacity
+                                    style={styles.tabletCategoryDropdown}
+                                    onPress={() => setTabletCategoriesOpen(current => !current)}
+                                    activeOpacity={0.85}>
+                                    <Text style={styles.dropdownText}>
+                                        {selectedCategory === 'All' ? 'All Categories' : selectedCategory}
+                                    </Text>
+                                    <Ionicons name="chevron-down" size={20} color={colors.primary} />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.tabletCategoryIconButton}
+                                    onPress={goToAddCategory}
+                                    activeOpacity={0.85}>
+                                    <Ionicons name="add" size={18} color={colors.white} />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.tabletCategoryIconButton}
+                                    onPress={goToEditCategory}
+                                    activeOpacity={0.85}>
+                                    <Ionicons name="create-outline" size={18} color={colors.white} />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.tabletCategoryIconButton, styles.deleteCategoryButton]}
+                                    onPress={deleteCategory}
+                                    activeOpacity={0.85}>
+                                    <Ionicons name="trash-outline" size={18} color={colors.white} />
+                                </TouchableOpacity>
+                            </View>
                         ) : (
                             renderCategoryButtons()
                         )}
                     </View>
+                    {renderTabletCategoryPanel()}
                     {isTablet ? renderTabletTable() : filteredItems().map(item => renderMobileCard(item))}
                 </ScrollView>
         </View>
@@ -512,9 +724,22 @@ const styles = StyleSheet.create({
         color: colors.primary,
         fontSize: 14,
     },
+    mobileCategoryControls: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 18,
+    },
+    categoryActionRow: {
+        flexDirection: 'row',
+        gap: 6,
+    },
+    mobileCategoryScroll: {
+        flex: 1,
+    },
     categoryRow: {
         gap: 8,
-        paddingBottom: 18,
+        paddingRight: 4,
     },
     categoryButton: {
         backgroundColor: '#E5E8E9',
@@ -533,6 +758,17 @@ const styles = StyleSheet.create({
     categoryButtonTextActive: {
         color: colors.white,
     },
+    categoryIconButton: {
+        backgroundColor: colors.primary,
+        borderRadius: 18,
+        width: 36,
+        height: 36,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    deleteCategoryButton: {
+        backgroundColor: colors.danger,
+    },
     tabletCategoryDropdown: {
         width: 190,
         height: 48,
@@ -544,6 +780,31 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+    },
+    tabletCategoryActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    tabletCategoryPanel: {
+        backgroundColor: colors.white,
+        borderWidth: 1,
+        borderColor: '#DDE3E6',
+        borderRadius: 8,
+        padding: 12,
+        marginTop: -16,
+        marginBottom: 18,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    tabletCategoryIconButton: {
+        height: 48,
+        width: 48,
+        backgroundColor: colors.primary,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     dropdownText: {
         color: colors.primary,
