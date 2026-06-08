@@ -31,19 +31,32 @@ export default function LoginScreen({ onLoginSuccess }) {
                 setErrorMessage('Email and password are required.');
                 return;
             }
+
+            await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('user');
             
             const data = await apiFetch(LOGIN_ENDPOINT, {
                 method: 'POST',
+                skipAuth: true,
                 body: JSON.stringify({
                     email: email.trim().toLowerCase(),
                     password: password,
                 }),
             });
             
-            await AsyncStorage.setItem('token', data.token);
-            await AsyncStorage.setItem('user', JSON.stringify(data.user));
+            const responseData = data.data || data;
+            const token = responseData.token || responseData.accessToken;
+            const user = responseData.user || responseData.staff || responseData.account;
 
-            onLoginSuccess(data.user);
+            if (!token || !user) {
+                setErrorMessage('Login succeeded, but the server did not return the account details.');
+                return;
+            }
+
+            await AsyncStorage.setItem('token', token);
+            await AsyncStorage.setItem('user', JSON.stringify(user));
+
+            onLoginSuccess(user);
         } catch (err) {
             console.log(err);
             setErrorMessage(err.message || 'Unable to login. Please try again.');

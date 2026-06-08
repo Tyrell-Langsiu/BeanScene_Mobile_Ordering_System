@@ -77,7 +77,7 @@ export default function AddEditMenuScreen({ navigation, route }) {
 
         const imageString = String(image);
 
-        if (imageString.startsWith('http') || imageString.startsWith('file:')) {
+        if (imageString.startsWith('http') || imageString.startsWith('file:') || imageString.startsWith('data:')) {
             return imageString;
         }
 
@@ -128,42 +128,56 @@ export default function AddEditMenuScreen({ navigation, route }) {
             glutenFree: normalizedFlags.includes('GF') || normalizedFlags.includes('glutenFree'),
         };
     }
-    async function getImageUpload() {
+    function getImageFileName() {
         if (!imageAsset?.uri) {
             return null;
         }
 
         const cleanUri = imageAsset.uri.split('?')[0];
-        const fileName =
+
+        return (
             imageAsset.fileName ||
             cleanUri.split('/').pop() ||
-            `menu-item-${Date.now()}.jpg`;
+            `menu-item-${Date.now()}.jpg`
+        );
+    }
+    function getImageMimeType(fileName) {
         const extension = fileName.split('.').pop()?.toLowerCase();
-        const mimeType = imageAsset.mimeType || (extension === 'png'
+
+        return imageAsset.mimeType || (extension === 'png'
             ? 'image/png'
             : extension === 'webp'
                 ? 'image/webp'
                 : 'image/jpeg');
+    }
+    async function appendImageToFormData(formData) {
+        if (!imageAsset?.uri) {
+            return false;
+        }
 
         if (Platform.OS === 'web') {
+            const fileName = getImageFileName();
             const response = await fetch(imageAsset.uri);
             const blob = await response.blob();
 
-            return new File([blob], fileName, { type: mimeType });
+            formData.append('photo', blob, fileName);
+            return true;
         }
 
-        return {
-            uri: imageAsset.uri,
-            name: fileName,
-            type: mimeType,
-        };
+        const fileName = getImageFileName();
+        const mimeType = getImageMimeType(fileName);
+        const photoUrl = imageAsset.base64
+            ? `data:${mimeType};base64,${imageAsset.base64}`
+            : imageAsset.uri;
+
+        formData.append('photoUrl', photoUrl);
+        return true;
     }
     async function buildMenuFormData() {
         const selectedCategory = getSelectedCategory();
         const selectedCategoryId = getCategoryId(selectedCategory) || category;
         const selectedCategoryName = getCategoryLabel(selectedCategory) || category;
         const formData = new FormData();
-        const imageUpload = await getImageUpload();
 
         formData.append('name', name.trim());
         formData.append('description', description.trim());
@@ -176,9 +190,9 @@ export default function AddEditMenuScreen({ navigation, route }) {
         formData.append('isAvailable', String(isAvailable));
         formData.append('isSpecial', 'false');
 
-        if (imageUpload) {
-            formData.append('photo', imageUpload);
-        } else if (imageUri) {
+        const imageWasAppended = await appendImageToFormData(formData);
+
+        if (!imageWasAppended && imageUri) {
             formData.append('photoUrl', imageUri.replace(API_BASE_URL, ''));
         }
 
@@ -276,6 +290,7 @@ export default function AddEditMenuScreen({ navigation, route }) {
                 allowsEditing: true,
                 aspect: [4, 3],
                 quality: 0.4,
+                base64: Platform.OS !== 'web',
             });
 
             if (!result.canceled) {

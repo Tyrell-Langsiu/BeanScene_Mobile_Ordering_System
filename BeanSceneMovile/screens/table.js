@@ -56,6 +56,7 @@ export default function TableScreen({ navigation }) {
 
             const cachedTables = await getCache(CACHE_KEYS.tables, []);
             const cachedOrders = await getCache(CACHE_KEYS.tableOrders, []);
+            let usingSavedData = false;
 
             if (cachedTables.length > 0) {
                 const cachedUpdatedTables = applyOrderStatuses(cachedTables, cachedOrders);
@@ -68,10 +69,12 @@ export default function TableScreen({ navigation }) {
             const [tableData, orderData] = await Promise.all([
                 apiFetch(TABLES_ENDPOINT).catch((err) => {
                     console.log('Table fetch error', err.message);
+                    usingSavedData = true;
                     return cachedTables.length > 0 ? cachedTables : fallbackTables;
                 }),
                 apiFetch(ORDERS_ENDPOINT).catch((err) => {
                     console.log('Order fetch error', err.message);
+                    usingSavedData = true;
                     return cachedOrders;
                 }),
             ]);
@@ -82,6 +85,13 @@ export default function TableScreen({ navigation }) {
             await setCache(CACHE_KEYS.tables, Array.isArray(tableData) ? tableData : []);
             await setCache(CACHE_KEYS.tableOrders, Array.isArray(orderData) ? orderData : []);
             await clearSelectedTableIfOccupied(updatedTables);
+
+            if (usingSavedData && (cachedTables.length > 0 || cachedOrders.length > 0)) {
+                Alert.alert(
+                    'Offline Mode',
+                    'Unable to connect to the server. Showing saved table and order data.'
+                );
+            }
         } catch (err) {
             console.log('Load tables error', err.message);
 
@@ -90,8 +100,16 @@ export default function TableScreen({ navigation }) {
 
             if (cachedTables.length > 0) {
                 setTables(applyOrderStatuses(cachedTables, cachedOrders));
+                Alert.alert(
+                    'Offline Mode',
+                    'Unable to connect to the server. Showing saved table and order data.'
+                );
             } else {
                 setTables(fallbackTables);
+                Alert.alert(
+                    'Connection Error',
+                    'Unable to connect to the server. Showing default table layout.'
+                );
             }
         } finally {
             setLoading(false);

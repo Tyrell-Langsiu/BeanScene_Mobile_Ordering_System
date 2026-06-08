@@ -51,7 +51,7 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
         const image = displayItem.photoUrl || displayItem.imageUrl || displayItem.photo || displayItem.image;
 
         if (!image) return null;
-        if (image.startsWith('http')) {
+        if (image.startsWith('http') || image.startsWith('file:') || image.startsWith('data:')) {
             return image;
         }
         return `${API_BASE_URL}${image}`;

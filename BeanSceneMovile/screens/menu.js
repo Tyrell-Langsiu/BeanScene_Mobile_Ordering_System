@@ -92,7 +92,7 @@ export default function MenuScreen({navigation}) {
     function getImageUrl(item) {
         const image = item.photoUrl || item.imageUrl || item.photo || item.image;
         if (!image) return null;
-        if (image.startsWith('http')) {
+        if (image.startsWith('http') || image.startsWith('file:') || image.startsWith('data:')) {
             return image;
         }
         return `${API_BASE_URL}${image}`;

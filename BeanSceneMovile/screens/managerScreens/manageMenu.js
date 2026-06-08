@@ -80,7 +80,7 @@ export default function ManageMenuScreen({navigation}) {
 
         const imageString = String(image);
 
-        if (imageString.startsWith('http')) {
+        if (imageString.startsWith('http') || imageString.startsWith('file:') || imageString.startsWith('data:')) {
             return imageString;
         }
 

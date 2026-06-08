@@ -54,6 +54,10 @@ export default function OrderScreen() {
 
             if (cachedOrders.length > 0) {
                 setOrders(cachedOrders);
+                Alert.alert(
+                    'Offline Mode',
+                    'Unable to connect to the server. Showing saved orders.'
+                );
             } else {
                 Alert.alert('Error', 'Unable to load orders. Please try again later.');
                 setOrders([]);

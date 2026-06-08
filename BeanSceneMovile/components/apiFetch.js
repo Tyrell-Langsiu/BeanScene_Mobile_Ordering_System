@@ -4,25 +4,23 @@ export const API_BASE_URL =
     process.env.EXPO_PUBLIC_API_BASE_URL || 'https://beansceneorderingsystem.onrender.com';
 
 export async function apiFetch(endpoint, options ={}) {
+    const { skipAuth = false, ...fetchOptions } = options;
     const token = await AsyncStorage.getItem('token');
 
     const isFormData =
-        typeof FormData !== 'undefined' && options.body instanceof FormData;
-
+        typeof FormData !== 'undefined' && fetchOptions.body instanceof FormData;
+       
     const headers = {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-        ...(token ? {Authorization: `Bearer ${token}`} : {}),
-        ...options.headers,
+        ...(!skipAuth && token ? {Authorization: `Bearer ${token}`} : {}),
+        ...(fetchOptions.headers || {}),
     };
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        ...options,
+        ...fetchOptions,
         headers,
     });
 
-    if (response.status === 401) {
-        throw new Error('Your session has expired. Please log in again.');
-    }
     let data = null;
 
     try {
@@ -30,6 +28,17 @@ export async function apiFetch(endpoint, options ={}) {
     } catch {
         data = null;
     }
+
+    if (response.status === 401) {
+        if (!skipAuth) {
+            await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('user');
+            throw new Error('Your session has expired. Please log in again.');
+        }
+
+        throw new Error(data?.message || data?.error || 'Invalid email or password.');
+    }
+
     if (!response.ok) {
         throw new Error(data?.message || data?.error || 'Something went wrong.');
     }
