@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
     View,
     Text,
@@ -9,10 +9,12 @@ import {
     Image,
     ActivityIndicator,
     Alert,
+    Platform,
     useWindowDimensions,
     Switch,
 } from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, styles as sharedStyles} from '../../styles.js';
 import { apiFetch, API_BASE_URL } from '../../components/apiFetch.js';
@@ -26,13 +28,16 @@ export default function ManageMenuScreen({navigation}) {
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [searchText, setSearchText] = useState('');
     const [loading, setLoading] = useState(true);
+    const [deletingItemId, setDeletingItemId] = useState(null);
 
     const { width } = useWindowDimensions();
     const isTablet = width >= 700;
 
-    useEffect(() => {
-        loadData();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            loadData();
+        }, [])
+    );
 
     async function loadData() {
         try {
@@ -60,7 +65,7 @@ export default function ManageMenuScreen({navigation}) {
     }
 
     function getItemId(item) {
-        return item.id || item._id;
+        return item.id || item._id || item.itemId || item.menuItemId;
     }
 
     function getItemName(item) {
@@ -101,6 +106,16 @@ export default function ManageMenuScreen({navigation}) {
 
     function getDietaryFlags(item) {
         if (Array.isArray(item.dietaryFlags)) return item.dietaryFlags;
+        if (typeof item.dietaryFlags === 'object' && item.dietaryFlags !== null) {
+            return Object.entries(item.dietaryFlags)
+                .filter(([, value]) => value === true)
+                .map(([key]) => {
+                    if (key === 'vegetarian') return 'V';
+                    if (key === 'vegan') return 'VG';
+                    if (key === 'glutenFree') return 'GF';
+                    return key;
+                });
+        }
         if (Array.isArray(item.flags)) return item.flags;
         return [];
     }
@@ -121,16 +136,54 @@ export default function ManageMenuScreen({navigation}) {
         });
     }
     function goToAddItem() {
-        Alert.alert('Comming Soon', 'Add menu item screen is not available yet.');
+        navigation.navigate('AddMenu');
     }
     function goToEditItem(item) {
-        Alert.alert('Coming Soon', `Editing ${getItemName(item)} is not available yet.`);
+        navigation.navigate('EditMenu', { item });
     }
 
-    async function deleteItem(item) {
+    async function performDeleteItem(item) {
+        const id = getItemId(item);
+
+        if (!id) {
+            Alert.alert('Error', 'This menu item is missing an ID and cannot be deleted.');
+            return;
+        }
+
+        try {
+            const idText = String(id);
+
+            setDeletingItemId(idText);
+
+            await apiFetch(`${MENU_ENDPOINT}/${encodeURIComponent(idText)}`, {
+                method: 'DELETE',
+            });
+
+            setMenuItems(current =>
+                current.filter(menuItem => String(getItemId(menuItem)) !== idText)
+            );
+            Alert.alert('Success', 'Menu item deleted.');
+        } catch (err) {
+            console.log(err);
+            Alert.alert('Error', err.message);
+        } finally {
+            setDeletingItemId(null);
+        }
+    }
+
+    function deleteItem(item) {
+        const message = `Are you sure you want to delete ${getItemName(item)}?`;
+
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            if (window.confirm(message)) {
+                performDeleteItem(item);
+            }
+            return;
+        }
+
         Alert.alert(
             'Delete Menu Item',
-            `Are you sure you want to delete ${getItemName(item)}?`,
+            message,
             [
                 {
                     text: 'Cancel',
@@ -139,23 +192,7 @@ export default function ManageMenuScreen({navigation}) {
                 {
                     text: 'Delete',
                     style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            const id = getItemId(item);
-
-                            await apiFetch(`${MENU_ENDPOINT}/${id}`, {
-                                method: 'DELETE',
-                            });
-
-                            setMenuItems(current =>
-                                current.filter(menuItem => getItemId(menuItem) !== id)
-                            );
-                            Alert.alert('Success', 'Menu item deleted.');
-                        } catch (err) {
-                            console.log(err);
-                            Alert.alert('Error', err.message);
-                        }
-                    },
+                    onPress: () => performDeleteItem(item),
                 },
             ]
         );
@@ -168,8 +205,7 @@ export default function ManageMenuScreen({navigation}) {
             await apiFetch(`${MENU_ENDPOINT}/${id}`, {
                 method: 'PUT',
                 body: JSON.stringify({
-                    isAvailable: newValue,
-                    available: newValue,
+                    isAvailable: String(newValue),
                 }),
             });
 
@@ -286,7 +322,9 @@ export default function ManageMenuScreen({navigation}) {
                             <Ionicons name="create-outline" size={19} color={colors.secondary || '#4AA6B8'} />
 
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => deleteItem(item)}>
+                        <TouchableOpacity
+                            onPress={() => deleteItem(item)}
+                            disabled={deletingItemId === String(getItemId(item))}>
                             <Ionicons name="trash-outline" size={19} color="#FF5B6B" />
                         </TouchableOpacity>
                 </View> 
@@ -341,7 +379,9 @@ export default function ManageMenuScreen({navigation}) {
                                         <Ionicons name="create-outline" size={18} color={colors.secondary || '#4AA6B8'} />
                                     </TouchableOpacity>
 
-                                    <TouchableOpacity onPress={() => deleteItem(item)}>
+                                    <TouchableOpacity
+                                        onPress={() => deleteItem(item)}
+                                        disabled={deletingItemId === String(getItemId(item))}>
                                         <Ionicons name="trash-outline" size={18} color="#FF5B6B" />
                                     </TouchableOpacity>
                                 </View>
@@ -403,7 +443,6 @@ export default function ManageMenuScreen({navigation}) {
         </View>
     );
 }
-
 const styles = StyleSheet.create({
     backButton: {
         marginRight: 12,

@@ -19,6 +19,7 @@ import ManagerScreen from './screens/manager.js';
 import StaffMemberScreen from './screens/managerScreens/staff.js';
 import AddEditStaffScreen from './screens/managerScreens/addEditStaff.js';
 import ManageMenuScreen from './screens/managerScreens/manageMenu.js';
+import AddEditMenuScreen from './screens/managerScreens/addEditMenu.js';
 
 const Tab = createBottomTabNavigator();
 
@@ -32,21 +33,23 @@ function MenuStackScreen() {
   )
 }
 const ManagerStack = createNativeStackNavigator();
-function ManagerStackScreen({ onLogout }) {
+function ManagerStackScreen({ onLogout, user }) {
   return (
     <ManagerStack.Navigator screenOptions={{headerShown: false}}>
       <ManagerStack.Screen name="Manage">
-        {(props) => <ManagerScreen {...props} onLogout={onLogout} />}
+        {(props) => <ManagerScreen {...props} onLogout={onLogout} user={user} />}
       </ManagerStack.Screen>
       <ManagerStack.Screen name="StaffMembers" component={StaffMemberScreen} />
       <ManagerStack.Screen name="AddStaff" component={AddEditStaffScreen} />
       <ManagerStack.Screen name="EditStaff" component = {AddEditStaffScreen} />
       <ManagerStack.Screen name="ManageMenu" component={ManageMenuScreen} />
+      <ManagerStack.Screen name="AddMenu" component={AddEditMenuScreen} />
+      <ManagerStack.Screen name="EditMenu" component={AddEditMenuScreen} />
     </ManagerStack.Navigator>
   );
 }
 
-function BottomTabs({onLogout}) {
+function BottomTabs({onLogout, user}) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -87,7 +90,7 @@ function BottomTabs({onLogout}) {
       <Tab.Screen name="Cart" component={CartScreen} />
       <Tab.Screen name="Order" component={OrderScreen} />
       <Tab.Screen name="Manager">
-        {() => <ManagerStackScreen onLogout={onLogout} />}
+        {() => <ManagerStackScreen onLogout={onLogout} user={user} />}
       </Tab.Screen>
     </Tab.Navigator>
     );
@@ -103,9 +106,6 @@ export default function App() {
 
   async function checkedSavedLogin() {
     try {
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('user');
-      
       const token = await AsyncStorage.getItem('token');
       const savedUser = await AsyncStorage.getItem('user');
 
@@ -138,7 +138,7 @@ export default function App() {
   return (
     <NavigationContainer>
       {loggedInUser ? (
-        <BottomTabs onLogout={handleLogout} />
+        <BottomTabs onLogout={handleLogout} user={loggedInUser} />
       ) : (
         <LoginScreen onLoginSuccess={handleLoginSuccess} />
       )}

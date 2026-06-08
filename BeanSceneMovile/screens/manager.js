@@ -11,7 +11,9 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { colors, styles as sharedStyles} from '../styles.js';
 
-export default function ManagerScreen({ navigation, onLogout }) {
+export default function ManagerScreen({ navigation, onLogout, user }) {
+    const isManager = user?.role === 'manager';
+
     async function handleLogout() {
         Alert.alert(
             'Log Out',
@@ -71,52 +73,56 @@ export default function ManagerScreen({ navigation, onLogout }) {
                         <Ionicons name="chevron-forward" size={22} color="#7D9AA0" />
                     </TouchableOpacity>
                 
-                <Text style={styles.sectionTitle}>Manager Options</Text>
-                <TouchableOpacity
-                    style={styles.optionCard}
-                    onPress={goToViewUsers}
-                    activeOpacity={0.85}>
-                        <View style={styles.iconBox}>
-                            <Ionicons name="people-outline" size={24} color={colors.white} />
-                        </View>
+                {isManager && (
+                    <>
+                        <Text style={styles.sectionTitle}>Manager Options</Text>
+                        <TouchableOpacity
+                            style={styles.optionCard}
+                            onPress={goToViewUsers}
+                            activeOpacity={0.85}>
+                                <View style={styles.iconBox}>
+                                    <Ionicons name="people-outline" size={24} color={colors.white} />
+                                </View>
 
-                        <View style={styles.optionTextBox}>
-                            <Text style={styles.optionTitle}>View Users</Text>
-                            <Text style={styles.optionSubtitle}>View and manage staff accounts</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={22} color="#7D9AA0" />
-                    </TouchableOpacity>
+                                <View style={styles.optionTextBox}>
+                                    <Text style={styles.optionTitle}>View Users</Text>
+                                    <Text style={styles.optionSubtitle}>View and manage staff accounts</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={22} color="#7D9AA0" />
+                            </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.optionCard}
-                        onPress={goToManageMenu}
-                        activeOpacity={0.85}
-                    >
-                        <View style={styles.iconBox}>
-                            <Ionicons name="restaurant-outline" size={24} color={colors.white} />
-                        </View>
+                            <TouchableOpacity
+                                style={styles.optionCard}
+                                onPress={goToManageMenu}
+                                activeOpacity={0.85}
+                            >
+                                <View style={styles.iconBox}>
+                                    <Ionicons name="restaurant-outline" size={24} color={colors.white} />
+                                </View>
 
-                        <View style={styles.optionTextBox}>
-                            <Text style={styles.optionTitle}>Manage Menu</Text>
-                            <Text style={styles.optionSubtitle}>Add, edit, or remove menu items</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={22} color="#7D9AA0" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.optionCard}
-                        onPress={goToReports}
-                        activeOpacity={0.85}>
-                            <View style={styles.iconBox}>
-                                <Ionicons name="bar-chart-outline" size={24} color={colors.white} />
-                            </View>
+                                <View style={styles.optionTextBox}>
+                                    <Text style={styles.optionTitle}>Manage Menu</Text>
+                                    <Text style={styles.optionSubtitle}>Add, edit, or remove menu items</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={22} color="#7D9AA0" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.optionCard}
+                                onPress={goToReports}
+                                activeOpacity={0.85}>
+                                    <View style={styles.iconBox}>
+                                        <Ionicons name="bar-chart-outline" size={24} color={colors.white} />
+                                    </View>
 
-                            <View style={styles.optionTextBox}>
-                                <Text style={styles.optionTitle}>View Reports</Text>
-                                <Text style={styles.optionSubtitle}>View order activity and summaries</Text>
-                            </View>
+                                    <View style={styles.optionTextBox}>
+                                        <Text style={styles.optionTitle}>View Reports</Text>
+                                        <Text style={styles.optionSubtitle}>View order activity and summaries</Text>
+                                    </View>
 
-                            <Ionicons name="chevron-forward" size={22} color="#7D9AA0" />
-                        </TouchableOpacity>
+                                    <Ionicons name="chevron-forward" size={22} color="#7D9AA0" />
+                                </TouchableOpacity>
+                    </>
+                )}
             </View>
         </View>
     );

@@ -1,12 +1,16 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export const API_BASE_URL = 'https://beansceneorderingsystem.onrender.com';
+export const API_BASE_URL =
+    process.env.EXPO_PUBLIC_API_BASE_URL || 'https://beansceneorderingsystem.onrender.com';
 
 export async function apiFetch(endpoint, options ={}) {
     const token = await AsyncStorage.getItem('token');
 
+    const isFormData =
+        typeof FormData !== 'undefined' && options.body instanceof FormData;
+
     const headers = {
-        'Content-Type':'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? {Authorization: `Bearer ${token}`} : {}),
         ...options.headers,
     };
@@ -27,7 +31,7 @@ export async function apiFetch(endpoint, options ={}) {
         data = null;
     }
     if (!response.ok) {
-        throw new Error(data?.message || 'Something went wrong.');
+        throw new Error(data?.message || data?.error || 'Something went wrong.');
     }
 
     return data;

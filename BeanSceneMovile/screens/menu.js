@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { View, Text, StyleSheet,
     FlatList, TouchableOpacity, Image,
     ScrollView, ActivityIndicator, useWindowDimensions
 } from 'react-native'; 
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, styles as sharedStyles } from '../styles';
 import {apiFetch, API_BASE_URL} from '../components/apiFetch.js';
 import SelectedTableHeader from '../components/selectedTableheader.js';
@@ -20,9 +20,11 @@ export default function MenuScreen({navigation}) {
     const { width } = useWindowDimensions();
     const isTablet = width >= 700;
 
-    useEffect(() => {
-        loadMenuData();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            loadMenuData();
+        }, [])
+    );
 
     
     async function loadMenuData() {
@@ -61,15 +63,31 @@ export default function MenuScreen({navigation}) {
         }
     }
     const filteredMenuItems = useMemo(() => {
+        const selectedCategory = categories.find((category) => {
+            const categoryId = category.id || category._id;
+
+            return String(categoryId) === String(selectedCategoryId);
+        });
+        const selectedCategoryName = selectedCategory?.name || selectedCategory?.categoryName;
+
         return menuItems.filter((item) => {
             const itemCategoryId =
             item.categoryId ||
             item.category?._id ||
             item.category?.id ||
             item.category;
-            return String(itemCategoryId) === String(selectedCategoryId);
+            const itemCategoryName =
+                item.categoryName ||
+                item.category?.name ||
+                (typeof item.category === 'string' ? item.category : '');
+
+            return (
+                String(itemCategoryId) === String(selectedCategoryId) ||
+                (!!selectedCategoryName &&
+                    String(itemCategoryName).toLowerCase() === String(selectedCategoryName).toLowerCase())
+            );
         });
-    }, [menuItems, selectedCategoryId]);
+    }, [categories, menuItems, selectedCategoryId]);
 
     function getImageUrl(item) {
         const image = item.photoUrl || item.imageUrl || item.photo || item.image;
@@ -87,7 +105,12 @@ export default function MenuScreen({navigation}) {
         if (typeof flags === 'object' && flags !== null) {
             return Object.entries(flags)
             .filter(([key, value]) => value === true)
-            .map(([key]) => key);
+            .map(([key]) => {
+                if (key === 'vegetarian') return 'V';
+                if (key === 'vegan') return 'VG';
+                if (key === 'glutenFree') return 'GF';
+                return key;
+            });
         }
         return [];
     }
@@ -108,7 +131,7 @@ export default function MenuScreen({navigation}) {
         const isSelected = String(selectedCategoryId) === String(categoryId);
         return (
             <TouchableOpacity
-                key={categoryId}
+                key={categoryId || category.name}
                 style={[styles.categoryButton, isSelected && styles.categoryButtonActive]}
                 onPress={() => setSelectedCategoryId(categoryId)}
             >

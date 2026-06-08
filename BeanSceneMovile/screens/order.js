@@ -36,8 +36,8 @@ export default function OrderScreen() {
                 id: order._id || order.id,
                 tableRef: order.tableRef || order.tableId || 'Unknown',
                 status: order.status || 'in-progress',
-                orderTime: formatOrderTime(order.orderDateTime || order.createdAt),
-                total: order.total || calculateTotal(order.items || []),
+                orderTime: formatOrderTime(order.orderedAt || order.orderDateTime || order.createdAt),
+                total: order.totalAmount ?? order.total ?? calculateTotal(order.items || []),
                 items: order.items || [],
                 notes: order.notes || '',
             }));
@@ -54,7 +54,13 @@ export default function OrderScreen() {
     function formatOrderTime(dateValue) {
         if (!dateValue) return 'Now';
 
-        const date = new Date(dateValue);
+        const date = typeof dateValue === 'object' && dateValue.seconds
+            ? new Date(dateValue.seconds * 1000)
+            : new Date(dateValue);
+
+        if (Number.isNaN(date.getTime())) {
+            return 'Now';
+        }
 
         return date.toLocaleTimeString([], {
             hour: '2-digit',
@@ -71,8 +77,8 @@ export default function OrderScreen() {
     }
     async function markServed(orderId) {
         try {
-            await apiFetch(`${ORDERS_ENDPOINT}/${orderId}`, {
-                method: 'PUT',
+            await apiFetch(`${ORDERS_ENDPOINT}/${orderId}/status`, {
+                method: 'PATCH',
                 body: JSON.stringify({ status: 'completed' }),
             });
             setOrders(currentOrders =>

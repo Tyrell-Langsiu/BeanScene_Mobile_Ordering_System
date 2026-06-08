@@ -9,8 +9,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, styles as sharedStyles } from '../styles';
 import SelectedTableHeader from '../components/selectedTableheader.js';
+import { API_BASE_URL } from '../components/apiFetch.js';
 
-const API_BASE_URL = 'https://beansceneorderingsystem.onrender.com';
 const CART_KEY = 'beanSceneCart';
 
 export default function ItemDetailsScreen({ route, navigation, showBack = false, onBack,}) {
@@ -44,7 +44,12 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
         if (typeof flags === 'object' && flags !== null) {
             return Object.entries(flags)
             .filter(([key, value]) => value === true)
-            .map(([key]) => key);
+            .map(([key]) => {
+                if (key === 'vegetarian') return 'V';
+                if (key === 'vegan') return 'VG';
+                if (key === 'glutenFree') return 'GF';
+                return key;
+            });
         }
 
         return [];
