@@ -4,6 +4,33 @@ import { CACHE_KEYS, setCache } from './cache.js';
 export const API_BASE_URL =
     process.env.EXPO_PUBLIC_API_BASE_URL || 'https://beansceneorderingsystem.onrender.com';
 
+/**
+ * Detects backend messages that mean the saved auth token can no longer be used.
+ *
+ * @param {?object} data Parsed backend response body.
+ * @returns {boolean} True when the response is an authentication failure.
+ */
+function isInvalidTokenResponse(data) {
+    const message = String(data?.message || data?.error || '').toLowerCase();
+
+    return (
+        message.includes('invalid or expire token') ||
+        message.includes('invalid or expired token') ||
+        message.includes('jwt expired') ||
+        message.includes('invalid token')
+    );
+}
+
+/**
+ * Removes saved auth data after the backend rejects the current token.
+ *
+ * @returns {Promise<void>} Resolves after auth storage is cleared.
+ */
+async function clearExpiredSession() {
+    await AsyncStorage.removeItem('token');
+    await AsyncStorage.removeItem('user');
+}
+
 export async function apiFetch(endpoint, options ={}) {
     const { skipAuth = false, ...fetchOptions } = options;
     const token = await AsyncStorage.getItem('token');
@@ -38,10 +65,9 @@ export async function apiFetch(endpoint, options ={}) {
         data = null;
     }
 
-    if (response.status === 401) {
+    if (response.status === 401 || (!skipAuth && isInvalidTokenResponse(data))) {
         if (!skipAuth) {
-            await AsyncStorage.removeItem('token');
-            await AsyncStorage.removeItem('user');
+            await clearExpiredSession();
             throw new Error('Your session has expired. Please log in again.');
         }
 

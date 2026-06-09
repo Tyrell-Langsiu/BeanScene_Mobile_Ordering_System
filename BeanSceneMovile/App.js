@@ -198,6 +198,21 @@ export default function App() {
     checkedSavedLogin();
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (!loggedInUser) return;
+
+      const token = await AsyncStorage.getItem('token');
+      const savedUser = await AsyncStorage.getItem('user');
+
+      if (!token || !savedUser) {
+        setLoggedInUser(null);
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [loggedInUser]);
+
   async function checkedSavedLogin() {
     try {
       const token = await AsyncStorage.getItem('token');
