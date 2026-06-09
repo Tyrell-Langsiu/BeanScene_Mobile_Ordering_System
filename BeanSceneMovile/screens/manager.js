@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { colors, styles as sharedStyles} from '../styles.js';
 import { CACHE_KEYS, removeCache } from '../components/cache.js';
+import OfflineHeaderBadge from '../components/offlineHeaderBadge.js';
 
 /**
  * Shows manager/staff navigation actions and handles logout cleanup.
@@ -47,9 +48,14 @@ export default function ManagerScreen({ navigation, onLogout, user }) {
                         await AsyncStorage.removeItem('selectedTable');
                         await AsyncStorage.removeItem('beanSceneCart');
                         await removeCache(CACHE_KEYS.cart);
+                        await removeCache(CACHE_KEYS.menuItems);
+                        await removeCache(CACHE_KEYS.menuCategories);
                         await removeCache(CACHE_KEYS.orders);
+                        await removeCache(CACHE_KEYS.pendingOrders);
+                        await removeCache(CACHE_KEYS.pendingMenuItems);
                         await removeCache(CACHE_KEYS.tableOrders);
                         await removeCache(CACHE_KEYS.tables);
+                        await removeCache(CACHE_KEYS.offlineMode);
 
                         if (onLogout) {
                             onLogout();
@@ -84,12 +90,35 @@ export default function ManagerScreen({ navigation, onLogout, user }) {
     function goToReports() {
        navigation.navigate('Reports');
     }
+    /**
+     * Resolves the signed-in user's display name for the header.
+     *
+     * @returns {string} Signed-in user name.
+     */
+    function getSignedInName() {
+        return (
+            user?.fullName ||
+            `${user?.firstName || ''} ${user?.lastName || ''}`.trim() ||
+            user?.name ||
+            user?.email ||
+            'Signed in'
+        );
+    }
 
     return (
         <View style={sharedStyles.screen}>
             <View style={sharedStyles.header}>
                 <Text style={sharedStyles.headerTitle}>Manage</Text>
+                <View style={styles.headerUserBox}>
+                    <Text style={styles.headerUserText} numberOfLines={1}>
+                        {getSignedInName()}
+                    </Text>
+                    {user?.role ? (
+                        <Text style={styles.headerRoleText}>{user.role}</Text>
+                    ) : null}
+                </View>
             </View>
+            <OfflineHeaderBadge />
 
             <View style={styles.container}>
                 <TouchableOpacity
@@ -214,5 +243,21 @@ const styles = StyleSheet.create({
         color: '#62777B',
         fontSize: 13,
         fontWeight: '500',
+    },
+    headerUserBox: {
+        marginLeft: 'auto',
+        alignItems: 'flex-end',
+        maxWidth: '45%',
+    },
+    headerUserText: {
+        color: colors.white,
+        fontSize: 12,
+        fontWeight: '800',
+    },
+    headerRoleText: {
+        color: colors.warning,
+        fontSize: 12,
+        fontWeight: '800',
+        marginTop: 2,
     },
 });

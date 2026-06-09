@@ -18,6 +18,8 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, styles as sharedStyles} from '../../styles.js';
 import { apiFetch, API_BASE_URL } from '../../components/apiFetch.js';
+import { CACHE_KEYS, getCache, setCache } from '../../components/cache.js';
+import OfflineHeaderBadge from '../../components/offlineHeaderBadge.js';
 
 const MENU_ENDPOINT = '/api/menu-items';
 const CATEGORIES_ENDPOINT = '/api/categories';
@@ -48,6 +50,64 @@ export default function ManageMenuScreen({navigation}) {
     );
 
     /**
+     * Converts a queued menu item payload back into FormData for syncing.
+     *
+     * @param {object} payload Serializable menu item payload.
+     * @returns {FormData} FormData ready for the menu item API.
+     */
+    function buildMenuFormDataFromPayload(payload) {
+        const formData = new FormData();
+
+        formData.append('name', payload.name);
+        formData.append('description', payload.description);
+        formData.append('price', payload.price);
+        formData.append('categoryId', payload.categoryId);
+        formData.append('categoryName', payload.categoryName);
+        formData.append('dietaryFlags', JSON.stringify(payload.dietaryFlags));
+        formData.append('ingredients', JSON.stringify(payload.ingredients || []));
+        formData.append('allergens', JSON.stringify(payload.allergens || []));
+        formData.append('isAvailable', payload.isAvailable);
+        formData.append('isSpecial', payload.isSpecial);
+
+        if (payload.photoUrl) {
+            formData.append('photoUrl', payload.photoUrl);
+        }
+
+        return formData;
+    }
+
+    /**
+     * Attempts to sync locally queued menu item saves before loading fresh menu data.
+     *
+     * @returns {Promise<void>} Resolves after pending menu items have been attempted.
+     */
+    async function syncPendingMenuItems() {
+        const pendingMenuItems = await getCache(CACHE_KEYS.pendingMenuItems, []);
+
+        if (pendingMenuItems.length === 0) return;
+
+        const remainingMenuItems = [];
+
+        for (const pendingItem of pendingMenuItems) {
+            try {
+                await apiFetch(pendingItem.endpoint, {
+                    method: pendingItem.method,
+                    body: buildMenuFormDataFromPayload(pendingItem.menuPayload),
+                });
+            } catch (err) {
+                console.log('Pending menu item sync error:', err);
+                remainingMenuItems.push(pendingItem);
+            }
+        }
+
+        await setCache(CACHE_KEYS.pendingMenuItems, remainingMenuItems);
+
+        if (remainingMenuItems.length < pendingMenuItems.length) {
+            Alert.alert('Sync Complete', 'Saved offline menu items have been sent to the database.');
+        }
+    }
+
+    /**
      * Loads menu items and categories for the manager view.
      *
      * @returns {Promise<void>} Resolves after menu management data has loaded.
@@ -55,6 +115,7 @@ export default function ManageMenuScreen({navigation}) {
     async function loadData() {
         try {
             setLoading(true);
+            await syncPendingMenuItems();
 
             const menuData = await apiFetch(MENU_ENDPOINT);
             const categoryData = await apiFetch(CATEGORIES_ENDPOINT);
@@ -770,6 +831,7 @@ export default function ManageMenuScreen({navigation}) {
                 
                 <Text style={sharedStyles.headerTitle}>Manage Menu</Text>
             </View>
+            <OfflineHeaderBadge />
             <TouchableOpacity
                 style={isTablet ? styles.addItemButton : styles.addCircleButton}
                 onPress={goToAddItem}>

@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { colors, styles as sharedStyles } from '../../styles.js';
 import { apiFetch } from '../../components/apiFetch.js';
+import OfflineHeaderBadge from '../../components/offlineHeaderBadge.js';
 
 const CATEGORIES_ENDPOINT = '/api/categories';
 
@@ -125,6 +126,7 @@ export default function AddEditCategoryScreen({ navigation, route }) {
                 </TouchableOpacity>
                 <Text style={sharedStyles.headerTitle}>{headerTitle}</Text>
             </View>
+            <OfflineHeaderBadge />
 
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={[styles.formCard, isTablet && styles.tabletFormCard]}>

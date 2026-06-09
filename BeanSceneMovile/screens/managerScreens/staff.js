@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, styles as sharedStyles } from '../../styles';
 import { apiFetch } from '../../components/apiFetch';
 import { sortWithDataStructures } from '../../components/sort';
+import OfflineHeaderBadge from '../../components/offlineHeaderBadge.js';
 
 const STAFF_ENDPOINT = '/api/staff';
 
@@ -357,6 +358,7 @@ export default function StaffMemberScreen({ navigation }) {
                     Staff Members
                 </Text>
             </View>
+            <OfflineHeaderBadge />
             <TouchableOpacity
                 style={isTablet ? styles.addStaffButton : styles.addCircleButton}
                 onPress={goToAddStaff}>
@@ -668,5 +670,5 @@ const styles = StyleSheet.create({
     backButton: {
         marginRight: 12,
         padding: 4,
-    }
+    },
 });

@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { CACHE_KEYS, setCache } from './cache.js';
 
 export const API_BASE_URL =
     process.env.EXPO_PUBLIC_API_BASE_URL || 'https://beansceneorderingsystem.onrender.com';
@@ -16,10 +17,18 @@ export async function apiFetch(endpoint, options ={}) {
         ...(fetchOptions.headers || {}),
     };
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        ...fetchOptions,
-        headers,
-    });
+    let response;
+
+    try {
+        response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            ...fetchOptions,
+            headers,
+        });
+        await setCache(CACHE_KEYS.offlineMode, false);
+    } catch (err) {
+        await setCache(CACHE_KEYS.offlineMode, true);
+        throw err;
+    }
 
     let data = null;
 

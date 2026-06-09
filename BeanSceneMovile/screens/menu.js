@@ -1,12 +1,13 @@
 import React, { useCallback, useState, useMemo } from 'react';
 import { View, Text, StyleSheet,
     FlatList, TouchableOpacity, Image,
-    ScrollView, ActivityIndicator, useWindowDimensions
+    ScrollView, ActivityIndicator, TextInput, useWindowDimensions
 } from 'react-native'; 
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, styles as sharedStyles } from '../styles';
 import {apiFetch, API_BASE_URL} from '../components/apiFetch.js';
+import { CACHE_KEYS, getCache, setCache } from '../components/cache.js';
 import SelectedTableHeader from '../components/selectedTableheader.js';
 
 const MENU_ENDPOINT = '/api/menu-items';
@@ -21,8 +22,10 @@ const CATEGORIES_ENDPOINT = '/api/categories';
  */
 export default function MenuScreen({navigation}) {
     const [menuItems, setMenuItems] = useState([]);
-    const [categories, setCategories] = useState([{ id: 'all', name: 'Entrees'}]);
+    const [categories, setCategories] = useState([]);
     const [selectedCategoryId, setSelectedCategoryId] = useState('all');
+    const [searchText, setSearchText] = useState('');
+    const [isOffline, setIsOffline] = useState(false);
     const [loading, setLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState('');
     const { width } = useWindowDimensions();
@@ -44,6 +47,16 @@ export default function MenuScreen({navigation}) {
         try {
             setLoading(true);
             setErrorMessage('');
+            setIsOffline(false);
+
+            const cachedItems = await getCache(CACHE_KEYS.menuItems, []);
+            const cachedCategories = await getCache(CACHE_KEYS.menuCategories, []);
+
+            if (cachedItems.length > 0 || cachedCategories.length > 0) {
+                setMenuItems(cachedItems);
+                setCategories(cachedCategories);
+                setLoading(false);
+            }
 
             const [menuData, categoryData] = await Promise.all([
                 apiFetch(MENU_ENDPOINT),
@@ -64,18 +77,36 @@ export default function MenuScreen({navigation}) {
 
             setCategories(activeCategories);
             setMenuItems(availableItems);
+            await setCache(CACHE_KEYS.menuItems, availableItems);
+            await setCache(CACHE_KEYS.menuCategories, activeCategories);
 
-            if (activeCategories.length > 0) {
-                setSelectedCategoryId(activeCategories[0].id || activeCategories[0]._id);
-            }
+            setSelectedCategoryId('all');
         } catch (err) {
             console.log(err);
-            setErrorMessage(err.message || 'Unable to load menu. Check your internet connection and try again');
+            const cachedItems = await getCache(CACHE_KEYS.menuItems, []);
+            const cachedCategories = await getCache(CACHE_KEYS.menuCategories, []);
+
+            if (cachedItems.length > 0 || cachedCategories.length > 0) {
+                setMenuItems(cachedItems);
+                setCategories(cachedCategories);
+                setIsOffline(true);
+                setErrorMessage('');
+            } else {
+                setErrorMessage(err.message || 'Unable to load menu. Check your internet connection and try again');
+            }
         } finally {
             setLoading(false);
         }
     }
+    const displayCategories = useMemo(() => {
+        return [
+            { id: 'all', name: 'All' },
+            ...categories,
+        ];
+    }, [categories]);
+
     const filteredMenuItems = useMemo(() => {
+        const searchValue = searchText.trim().toLowerCase();
         const selectedCategory = categories.find((category) => {
             const categoryId = category.id || category._id;
 
@@ -84,6 +115,8 @@ export default function MenuScreen({navigation}) {
         const selectedCategoryName = selectedCategory?.name || selectedCategory?.categoryName;
 
         return menuItems.filter((item) => {
+            const itemName = String(item.name || item.itemName || '').toLowerCase();
+            const itemDescription = String(item.description || '').toLowerCase();
             const itemCategoryId =
             item.categoryId ||
             item.category?._id ||
@@ -93,14 +126,19 @@ export default function MenuScreen({navigation}) {
                 item.categoryName ||
                 item.category?.name ||
                 (typeof item.category === 'string' ? item.category : '');
-
-            return (
+            const matchesSearch =
+                !searchValue ||
+                itemName.includes(searchValue) ||
+                itemDescription.includes(searchValue);
+            const matchesCategory =
+                selectedCategoryId === 'all' ||
                 String(itemCategoryId) === String(selectedCategoryId) ||
                 (!!selectedCategoryName &&
-                    String(itemCategoryName).toLowerCase() === String(selectedCategoryName).toLowerCase())
-            );
+                    String(itemCategoryName).toLowerCase() === String(selectedCategoryName).toLowerCase());
+
+            return matchesSearch && matchesCategory;
         });
-    }, [categories, menuItems, selectedCategoryId]);
+    }, [categories, menuItems, searchText, selectedCategoryId]);
 
     /**
      * Converts a menu item's stored image value into a URI React Native can render.
@@ -243,13 +281,33 @@ export default function MenuScreen({navigation}) {
     return (
         <View style={sharedStyles.screen}>
             <SelectedTableHeader title="Menu" />
+            {isOffline ? (
+                <View style={styles.offlineBanner}>
+                    <Ionicons name="cloud-offline-outline" size={18} color={colors.white} />
+                    <Text style={styles.offlineBannerText}>
+                        Offline mode: showing saved menu items.
+                    </Text>
+                </View>
+            ) : null}
+            <View style={styles.searchSection}>
+                <View style={styles.searchBox}>
+                    <Ionicons name="search-outline" size={20} color="#7D9AA0" />
+                    <TextInput
+                        style={styles.searchInput}
+                        value={searchText}
+                        onChangeText={setSearchText}
+                        placeholder="Search menu items..."
+                        placeholderTextColor="#8AA1A6"
+                    />
+                </View>
+            </View>
             <View style={styles.categorySection}>
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.categoryContent}
                 >
-                    {categories.map(renderCategory)}
+                    {displayCategories.map(renderCategory)}
                 </ScrollView>
             </View>
             <View style={styles.fakeScrollRow}>
@@ -297,6 +355,41 @@ export default function MenuScreen({navigation}) {
 }
 
 const styles = StyleSheet.create({
+  offlineBanner: {
+    backgroundColor: colors.warning || '#F2BE2C',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  offlineBannerText: {
+    color: colors.white,
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  searchSection: {
+    backgroundColor: colors.white,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
+  searchBox: {
+    height: 46,
+    borderWidth: 1,
+    borderColor: '#DDE3E6',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F7FAFA',
+  },
+  searchInput: {
+    flex: 1,
+    color: colors.primary,
+    fontSize: 14,
+  },
   categorySection: {
     backgroundColor: colors.white,
     paddingTop: 14,

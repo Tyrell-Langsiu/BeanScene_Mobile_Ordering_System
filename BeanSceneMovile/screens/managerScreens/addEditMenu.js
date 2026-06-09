@@ -17,6 +17,8 @@ import * as ImagePicker from 'expo-image-picker';
 
 import {colors, styles as sharedStyles} from '../../styles.js';
 import { apiFetch, API_BASE_URL } from '../../components/apiFetch.js';
+import { CACHE_KEYS, addToCacheQueue, getCache, setCache } from '../../components/cache.js';
+import OfflineHeaderBadge from '../../components/offlineHeaderBadge.js';
 
 
 const MENU_ENDPOINT = '/api/menu-items';
@@ -63,6 +65,7 @@ export default function AddEditMenuScreen({ navigation, route }) {
         : 'Add Menu Item';
 
     useEffect(() => {
+        syncPendingMenuItems();
         loadCategories();
     }, []);
 
@@ -240,34 +243,88 @@ export default function AddEditMenuScreen({ navigation, route }) {
         return true;
     }
     /**
+     * Builds a serializable menu item payload that can be sent now or queued offline.
+     *
+     * @returns {Promise<object>} Plain menu item payload.
+     */
+    async function buildMenuItemPayload() {
+        const selectedCategory = getSelectedCategory();
+        const selectedCategoryId = getCategoryId(selectedCategory) || category;
+        const selectedCategoryName = getCategoryLabel(selectedCategory) || category;
+        const payload = {
+            name: name.trim(),
+            description: description.trim(),
+            price: String(Number(price)),
+            categoryId: String(selectedCategoryId),
+            categoryName: String(selectedCategoryName),
+            dietaryFlags: buildDietaryFlagsObject(dietaryFlags),
+            ingredients: [],
+            allergens: [],
+            isAvailable: String(isAvailable),
+            isSpecial: 'false',
+            photoUrl: imageUri ? imageUri.replace(API_BASE_URL, '') : '',
+        };
+
+        if (imageAsset?.uri && Platform.OS !== 'web') {
+            const fileName = getImageFileName();
+            const mimeType = getImageMimeType(fileName);
+
+            payload.photoUrl = imageAsset.base64
+                ? `data:${mimeType};base64,${imageAsset.base64}`
+                : imageAsset.uri;
+        }
+
+        return payload;
+    }
+    /**
+     * Converts a serializable menu item payload into FormData for the backend.
+     *
+     * @param {object} payload Plain menu item payload.
+     * @returns {FormData} FormData payload for create or update.
+     */
+    function buildMenuFormDataFromPayload(payload) {
+        const formData = new FormData();
+
+        formData.append('name', payload.name);
+        formData.append('description', payload.description);
+        formData.append('price', payload.price);
+        formData.append('categoryId', payload.categoryId);
+        formData.append('categoryName', payload.categoryName);
+        formData.append('dietaryFlags', JSON.stringify(payload.dietaryFlags));
+        formData.append('ingredients', JSON.stringify(payload.ingredients));
+        formData.append('allergens', JSON.stringify(payload.allergens));
+        formData.append('isAvailable', payload.isAvailable);
+        formData.append('isSpecial', payload.isSpecial);
+
+        if (payload.photoUrl) {
+            formData.append('photoUrl', payload.photoUrl);
+        }
+
+        return formData;
+    }
+    /**
      * Builds the multipart menu item payload expected by the backend.
      *
      * @returns {Promise<FormData>} FormData payload for create or update.
      */
     async function buildMenuFormData() {
-        const selectedCategory = getSelectedCategory();
-        const selectedCategoryId = getCategoryId(selectedCategory) || category;
-        const selectedCategoryName = getCategoryLabel(selectedCategory) || category;
-        const formData = new FormData();
+        const payload = await buildMenuItemPayload();
 
-        formData.append('name', name.trim());
-        formData.append('description', description.trim());
-        formData.append('price', String(Number(price)));
-        formData.append('categoryId', String(selectedCategoryId));
-        formData.append('categoryName', String(selectedCategoryName));
-        formData.append('dietaryFlags', JSON.stringify(buildDietaryFlagsObject(dietaryFlags)));
-        formData.append('ingredients', JSON.stringify([]));
-        formData.append('allergens', JSON.stringify([]));
-        formData.append('isAvailable', String(isAvailable));
-        formData.append('isSpecial', 'false');
+        if (Platform.OS === 'web' && imageAsset?.uri) {
+            const formData = buildMenuFormDataFromPayload({
+                ...payload,
+                photoUrl: '',
+            });
+            const imageWasAppended = await appendImageToFormData(formData);
 
-        const imageWasAppended = await appendImageToFormData(formData);
+            if (!imageWasAppended && payload.photoUrl) {
+                formData.append('photoUrl', payload.photoUrl);
+            }
 
-        if (!imageWasAppended && imageUri) {
-            formData.append('photoUrl', imageUri.replace(API_BASE_URL, ''));
+            return formData;
         }
 
-        return formData;
+        return buildMenuFormDataFromPayload(payload);
     }
     /**
      * Loads menu categories for the category selector.
@@ -289,6 +346,53 @@ export default function AddEditMenuScreen({ navigation, route }) {
             }
         } catch (err) {
             console.log(err);
+        }
+    }
+    /**
+     * Stores a failed menu item save locally so it can sync later.
+     *
+     * @param {object} menuPayload Serializable menu item payload.
+     * @param {'POST'|'PUT'} method Backend method to use when syncing.
+     * @param {string} endpoint Backend endpoint to call when syncing.
+     * @returns {Promise<void>} Resolves after the pending menu item is cached.
+     */
+    async function savePendingMenuItem(menuPayload, method, endpoint) {
+        await addToCacheQueue(CACHE_KEYS.pendingMenuItems, {
+            queueId: `menu-item-${Date.now()}`,
+            createdAt: new Date().toISOString(),
+            method,
+            endpoint,
+            menuPayload,
+        });
+    }
+    /**
+     * Attempts to send locally queued menu item saves to the backend.
+     *
+     * @returns {Promise<void>} Resolves after all reachable pending menu items have synced.
+     */
+    async function syncPendingMenuItems() {
+        const pendingMenuItems = await getCache(CACHE_KEYS.pendingMenuItems, []);
+
+        if (pendingMenuItems.length === 0) return;
+
+        const remainingMenuItems = [];
+
+        for (const pendingItem of pendingMenuItems) {
+            try {
+                await apiFetch(pendingItem.endpoint, {
+                    method: pendingItem.method,
+                    body: buildMenuFormDataFromPayload(pendingItem.menuPayload),
+                });
+            } catch (err) {
+                console.log('Pending menu item sync error:', err);
+                remainingMenuItems.push(pendingItem);
+            }
+        }
+
+        await setCache(CACHE_KEYS.pendingMenuItems, remainingMenuItems);
+
+        if (remainingMenuItems.length < pendingMenuItems.length) {
+            Alert.alert('Sync Complete', 'Saved offline menu items have been sent to the database.');
         }
     }
     /**
@@ -427,10 +531,15 @@ export default function AddEditMenuScreen({ navigation, route }) {
 
         try {
             setSaving(true);
-            const payload = await buildMenuFormData();
+            const menuPayload = await buildMenuItemPayload();
+            const payload = Platform.OS === 'web' && imageAsset?.uri
+                ? await buildMenuFormData()
+                : buildMenuFormDataFromPayload(menuPayload);
 
             if (isEditing) {
-                await apiFetch(`${MENU_ENDPOINT}/${getItemId(editingItem)}`, {
+                const endpoint = `${MENU_ENDPOINT}/${getItemId(editingItem)}`;
+
+                await apiFetch(endpoint, {
                     method: 'PUT',
                     body: payload,
                 });
@@ -447,7 +556,20 @@ export default function AddEditMenuScreen({ navigation, route }) {
             }
         } catch (err) {
             console.log(err);
-            Alert.alert('Error', err.message);
+
+            const menuPayload = await buildMenuItemPayload();
+            const method = isEditing ? 'PUT' : 'POST';
+            const endpoint = isEditing
+                ? `${MENU_ENDPOINT}/${getItemId(editingItem)}`
+                : MENU_ENDPOINT;
+
+            await savePendingMenuItem(menuPayload, method, endpoint);
+
+            Alert.alert(
+                'Offline Mode',
+                'No internet connection. This menu item was saved on this device and will sync when the connection returns.'
+            );
+            navigation.navigate('ManageMenu');
         } finally {
             setSaving(false);
         }
@@ -494,6 +616,7 @@ export default function AddEditMenuScreen({ navigation, route }) {
                     </TouchableOpacity>
                     <Text style={sharedStyles.headerTitle}>{headerTitle}</Text>
             </View>
+            <OfflineHeaderBadge />
 
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={[styles.formCard, isTablet && styles.tabletFormCard]}>

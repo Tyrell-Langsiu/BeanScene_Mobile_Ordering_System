@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import {colors, styles as sharedStyles} from '../../styles.js';
 import { apiFetch } from '../../components/apiFetch.js';
+import OfflineHeaderBadge from '../../components/offlineHeaderBadge.js';
 
 const REPORTS_ENDPOINT = '/api/reports';
 const ORDERS_SUMMARY_ENDPOINT = `${REPORTS_ENDPOINT}/orders-summary`;
@@ -75,17 +76,20 @@ export default function ReportsScreen({ navigation }) {
      */
     function renderHeader() {
         return (
-            <View style={sharedStyles.header}>
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={styles.backButton}
-                    activeOpacity={0.7}>
-                        <Ionicons name="chevron-back" size={26} color={colors.white} />
-                    </TouchableOpacity>
-                <Text style={sharedStyles.headerTitle}>
-                    {isTablet ? 'Reports Dashboard' : 'Reports'}
-                </Text>
-            </View>
+            <>
+                <View style={sharedStyles.header}>
+                    <TouchableOpacity
+                        onPress={() => navigation.goBack()}
+                        style={styles.backButton}
+                        activeOpacity={0.7}>
+                            <Ionicons name="chevron-back" size={26} color={colors.white} />
+                        </TouchableOpacity>
+                    <Text style={sharedStyles.headerTitle}>
+                        {isTablet ? 'Reports Dashboard' : 'Reports'}
+                    </Text>
+                </View>
+                <OfflineHeaderBadge />
+            </>
         );
     }
     /**

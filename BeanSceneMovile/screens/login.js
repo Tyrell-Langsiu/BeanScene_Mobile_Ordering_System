@@ -83,7 +83,11 @@ export default function LoginScreen({ onLoginSuccess }) {
         >
             <View style={styles.topSection}>
                 <View style={styles.logoCircle}>
-                    <Text style={styles.logoText}>BS</Text>
+                    <Image
+                        source={require('../assets/BeanScene.png')}
+                        style={styles.logoImage}
+                        resizeMode="cover"
+                    />
                 </View>
 
                 <Text style={styles.appTitle}>Bean Scene</Text>
@@ -152,11 +156,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
+        overflow: 'hidden',
     },
-    logoText: {
-        color: colors.white,
-        fontSize: 30,
-        fontWeight: '800',
+    logoImage: {
+        width: '100%',
+        height: '100%',
     },
     appTitle: {
         color: colors.muted,

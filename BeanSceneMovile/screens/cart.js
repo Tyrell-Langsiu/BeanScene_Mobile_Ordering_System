@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, styles as sharedStyles } from '../styles.js';
 import SelectedTableHeader from '../components/selectedTableheader.js';
 import { apiFetch } from '../components/apiFetch.js';
-import { CACHE_KEYS, getCache, removeCache, setCache } from '../components/cache.js';
+import { CACHE_KEYS, addToCacheQueue, getCache, removeCache, setCache } from '../components/cache.js';
 
 const CART_KEY = 'beanSceneCart';
 const TABLE_KEY = 'selectedTable';
@@ -25,7 +25,7 @@ const ORDERS_ENDPOINT = '/api/orders';
  *
  * @returns {React.ReactElement} Cart and order submission screen.
  */
-export default function CartScreen() {
+export default function CartScreen({ navigation }) {
     const [cartItems, setCartItems] = useState([]);
     const [tableRef, setTableRef] = useState(null);
     const [tableId, setTableId] = useState(null);
@@ -36,6 +36,7 @@ export default function CartScreen() {
     useFocusEffect(
         useCallback(() => {
             loadOrder();
+            syncPendingOrders();
         }, [])
     );
     /**
@@ -135,6 +136,90 @@ export default function CartScreen() {
     };
 
     /**
+     * Clears the submitted cart and selected table after online or offline order save.
+     *
+     * @returns {Promise<void>} Resolves after local order draft state is cleared.
+     */
+    async function clearSubmittedOrderDraft(clearOrderCaches = true) {
+        await removeCache(CACHE_KEYS.cart);
+
+        if (clearOrderCaches) {
+            await removeCache(CACHE_KEYS.orders);
+            await removeCache(CACHE_KEYS.tableOrders);
+            await removeCache(CACHE_KEYS.tables);
+        }
+
+        await AsyncStorage.removeItem(CART_KEY);
+        await AsyncStorage.removeItem(TABLE_KEY);
+
+        setCartItems([]);
+        setTableRef(null);
+        setTableId(null);
+    }
+
+    /**
+     * Stores a failed order submission locally so it can sync later.
+     *
+     * @param {object} orderData Order payload that failed to submit.
+     * @returns {Promise<void>} Resolves after the pending order is cached.
+     */
+    async function savePendingOrder(orderData) {
+        const pendingOrder = {
+            queueId: `order-${Date.now()}`,
+            createdAt: new Date().toISOString(),
+            orderData,
+        };
+        const cachedOrders = await getCache(CACHE_KEYS.orders, []);
+        const cachedTableOrders = await getCache(CACHE_KEYS.tableOrders, []);
+        const offlineOrder = {
+            ...orderData,
+            id: pendingOrder.queueId,
+            orderTime: 'Pending',
+            orderedAtValue: Date.now(),
+            itemCount: orderData.items.length,
+            pendingSync: true,
+        };
+
+        await addToCacheQueue(CACHE_KEYS.pendingOrders, pendingOrder);
+        await setCache(CACHE_KEYS.orders, [offlineOrder, ...cachedOrders]);
+        await setCache(CACHE_KEYS.tableOrders, [offlineOrder, ...cachedTableOrders]);
+    }
+
+    /**
+     * Attempts to submit any locally queued offline orders to the backend.
+     *
+     * @returns {Promise<void>} Resolves after all reachable pending orders have synced.
+     */
+    async function syncPendingOrders() {
+        const pendingOrders = await getCache(CACHE_KEYS.pendingOrders, []);
+
+        if (pendingOrders.length === 0) return;
+
+        const remainingOrders = [];
+
+        for (const pendingOrder of pendingOrders) {
+            try {
+                await apiFetch(ORDERS_ENDPOINT, {
+                    method: 'POST',
+                    body: JSON.stringify(pendingOrder.orderData),
+                });
+            } catch (err) {
+                console.log('Pending order sync error:', err);
+                remainingOrders.push(pendingOrder);
+            }
+        }
+
+        await setCache(CACHE_KEYS.pendingOrders, remainingOrders);
+
+        if (remainingOrders.length < pendingOrders.length) {
+            await removeCache(CACHE_KEYS.orders);
+            await removeCache(CACHE_KEYS.tableOrders);
+            await removeCache(CACHE_KEYS.tables);
+            Alert.alert('Sync Complete', 'Saved offline orders have been sent to the database.');
+        }
+    }
+
+    /**
      * Submits the cart as an in-progress order and clears order-related cache.
      *
      * @returns {Promise<void>} Resolves after submission succeeds or an error alert is shown.
@@ -155,47 +240,47 @@ export default function CartScreen() {
             );
             return;
         }
-        try {
-            const orderData = {
-                tableRef: tableRef,
-                tableId: tableId,
-                items: cartItems.map((item) => ({
-                    menuItemId: item.menuItemId || item.id,
-                    name: item.name,
-                    price: Number(item.price),
-                    quantity: Number(item.quantity),
-                    notes: item.notes || item.specialRequests || '',
-                    specialRequests: item.specialRequests || item.notes || '',
-                })),
-                status: 'in-progress',
-                notes: '',
-                total: subtotal,
-                orderDateTime: new Date().toISOString(),
-            };
+        const orderData = {
+            tableRef: tableRef,
+            tableId: tableId,
+            items: cartItems.map((item) => ({
+                menuItemId: item.menuItemId || item.id,
+                name: item.name,
+                price: Number(item.price),
+                quantity: Number(item.quantity),
+                notes: item.notes || item.specialRequests || '',
+                specialRequests: item.specialRequests || item.notes || '',
+            })),
+            status: 'in-progress',
+            notes: '',
+            total: subtotal,
+            orderDateTime: new Date().toISOString(),
+        };
 
+        try {
             await apiFetch(ORDERS_ENDPOINT, {
                 method: 'POST',
                 body: JSON.stringify(orderData),
             });
 
-            await removeCache(CACHE_KEYS.cart);
-            await removeCache(CACHE_KEYS.orders);
-            await removeCache(CACHE_KEYS.tableOrders);
-            await removeCache(CACHE_KEYS.tables);
-            await AsyncStorage.removeItem(CART_KEY);
-            await AsyncStorage.removeItem(TABLE_KEY);
-
-            setCartItems([]);
-            setTableRef(null);
-            setTableId(null);
+            await clearSubmittedOrderDraft();
 
             Alert.alert('Success', 'Order submitted to kitchen.')
         } catch (err) {
             console.log('Submit order error:', err);
 
+            await savePendingOrder(orderData);
+            await clearSubmittedOrderDraft(false);
+
             Alert.alert(
-                'Order Failed',
-                err.message || 'Could not submit the order. Please try again.'
+                'Offline Mode',
+                'No internet connection. The order was saved on this device and will sync when the connection returns.',
+                [
+                    {
+                        text: 'View Orders',
+                        onPress: () => navigation.navigate('Order'),
+                    },
+                ]
             );
         }
     };

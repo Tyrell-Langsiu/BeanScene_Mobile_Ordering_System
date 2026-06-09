@@ -51,6 +51,8 @@ export default function OrderScreen() {
                 setOrders(cachedOrders);
                 setLoading(false);
             }
+
+            await syncPendingOrders();
             
             const data = await apiFetch(ORDERS_ENDPOINT);
 
@@ -77,6 +79,59 @@ export default function OrderScreen() {
         }
     }
     /**
+     * Sends queued offline orders to the backend when the order screen reconnects.
+     *
+     * @returns {Promise<void>} Resolves after pending orders have been attempted.
+     */
+    async function syncPendingOrders() {
+        const pendingOrders = await getCache(CACHE_KEYS.pendingOrders, []);
+
+        if (pendingOrders.length === 0) return false;
+
+        const remainingOrders = [];
+
+        for (const pendingOrder of pendingOrders) {
+            try {
+                await apiFetch(ORDERS_ENDPOINT, {
+                    method: 'POST',
+                    body: JSON.stringify(pendingOrder.orderData),
+                });
+            } catch (err) {
+                console.log('Pending order sync error:', err);
+                remainingOrders.push(pendingOrder);
+            }
+        }
+
+        await setCache(CACHE_KEYS.pendingOrders, remainingOrders);
+
+        if (remainingOrders.length < pendingOrders.length) {
+            await removeSyncedOfflineOrders(remainingOrders);
+            Alert.alert('Sync Complete', 'Saved offline orders have been sent to the database.');
+            return true;
+        }
+
+        return false;
+    }
+    /**
+     * Removes synced offline placeholder orders from the local order cache.
+     *
+     * @param {object[]} remainingOrders Pending orders that failed to sync.
+     * @returns {Promise<void>} Resolves after cached order placeholders are updated.
+     */
+    async function removeSyncedOfflineOrders(remainingOrders) {
+        const cachedOrders = await getCache(CACHE_KEYS.orders, []);
+        const remainingIds = remainingOrders.map(order => order.queueId);
+        const updatedOrders = cachedOrders.filter(order => {
+            if (!order.pendingSync) return true;
+
+            return remainingIds.includes(order.id);
+        });
+
+        await setCache(CACHE_KEYS.orders, updatedOrders);
+        await setCache(CACHE_KEYS.tableOrders, updatedOrders);
+        setOrders(updatedOrders);
+    }
+    /**
      * Converts raw backend orders into the UI shape used by this screen.
      *
      * @param {object[]} data Raw order records.
@@ -97,9 +152,42 @@ export default function OrderScreen() {
             total: order.totalAmount ?? order.total ?? calculateTotal(order.items || []),
             items: order.items || [],
             itemCount: Array.isArray(order.items) ? order.items.length : 0,
-            notes: order.notes || '',
+            notes: getOrderNotes(order),
             };
         });
+    }
+    /**
+     * Resolves order-level notes from possible backend field names.
+     *
+     * @param {object} order Raw order record.
+     * @returns {string} Order notes.
+     */
+    function getOrderNotes(order) {
+        return (
+            order.notes ||
+            order.note ||
+            order.orderNotes ||
+            order.specialRequests ||
+            order.specialInstructions ||
+            ''
+        );
+    }
+    /**
+     * Resolves item-level notes or special requests from possible backend field names.
+     *
+     * @param {object} item Order item record.
+     * @returns {string} Item note text.
+     */
+    function getItemNotes(item) {
+        return (
+            item.notes ||
+            item.note ||
+            item.specialRequests ||
+            item.specialRequest ||
+            item.specialInstructions ||
+            item.instructions ||
+            ''
+        );
     }
     /**
      * Formats an order date value as a short display time.
@@ -324,18 +412,22 @@ export default function OrderScreen() {
                                                 <Text style={styles.timeText}>{order.orderTime}</Text>
                                         </View>
                                         <View style={styles.itemContainer}>
-                                            {order.items.map((item, index) => (
-                                                <View key={index} style={styles.itemRow}>
-                                                    <Text style={styles.itemText}>
-                                                        {item.quantity || 1} x {item.name}
-                                                    </Text>
-                                                    {item.note || item.specialRequests ? (
-                                                        <Text style={styles.noteText}>
-                                                            {item.note || item.specialRequests}
+                                            {order.items.map((item, index) => {
+                                                const itemNotes = getItemNotes(item);
+
+                                                return (
+                                                    <View key={index} style={styles.itemRow}>
+                                                        <Text style={styles.itemText}>
+                                                            {item.quantity || 1} x {item.name}
                                                         </Text>
-                                                    ) : null}
-                                                </View>
-                                            ))}
+                                                        {itemNotes ? (
+                                                            <Text style={styles.noteText}>
+                                                                Note: {itemNotes}
+                                                            </Text>
+                                                        ) : null}
+                                                    </View>
+                                                );
+                                            })}
                                         </View>
                                         {order.notes ? (
                                             <Text style={styles.orderNote}>Note: {order.notes}</Text>
