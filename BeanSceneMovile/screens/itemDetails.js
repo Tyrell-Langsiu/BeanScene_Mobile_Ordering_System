@@ -3,7 +3,7 @@ import {
     View, Text, StyleSheet,
     Image, ScrollView, TextInput,
     TouchableOpacity, useWindowDimensions,
-    Alert
+    Alert, 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, styles as sharedStyles } from '../styles';
@@ -265,8 +265,9 @@ export default function ItemDetailsScreen({ route, navigation, showBack = false,
                         <TouchableOpacity style={styles.addButton} onPress={addToCart}>
                             <Text style={styles.addButtonText}>
                                 Add to Cart - ${totalPrice.toFixed(2)}
-                            </Text>
-                        </TouchableOpacity>
+                                </Text>
+                            </TouchableOpacity>
+                       
                     </View>
                 </View>
             </ScrollView>
